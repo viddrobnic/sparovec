@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -30,7 +31,11 @@ func main() {
 
 	// Create router
 	router := echo.New()
-	router.Use(middleware.RequestID(),
+	router.Use(
+		middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+			Timeout: 5 * time.Second,
+		}),
+		middleware.RequestID(),
 		middleware.RemoveTrailingSlash(),
 		middleware.Logger(),
 		middleware.CORSWithConfig(middleware.CORSConfig{
