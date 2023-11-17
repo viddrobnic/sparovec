@@ -1,0 +1,16 @@
+[api]
+listen_address = "0.0.0.0"
+port = 8000
+
+cors_allowed_origins = ["http://localhost:8000"]
+
+[database]
+location = "db.sqlite"
+
+[observability]
+write_to_file = true
+write_to_console = true
+
+path = "logs/sparovec.log"
+max_size = 10
+max_backups = 5
