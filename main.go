@@ -75,11 +75,13 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	authService := service.NewAuth(usersRepository, conf, logger)
 
 	authRoutes := routes.NewAuth(authService)
+	walletsRoutes := routes.NewWallets()
 
 	router := createRouter(conf, authService)
 	router.Static("/static", "assets")
 
 	authRoutes.Mount(router.Group("/auth"))
+	walletsRoutes.Mount(router.Group(""))
 
 	err := router.Start(fmt.Sprintf("%s:%d", conf.API.ListenAddress, conf.API.Port))
 	if err != nil {
