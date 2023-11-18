@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -15,8 +14,10 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/database"
+	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/observability"
 	"github.com/viddrobnic/sparovec/repository"
+	"github.com/viddrobnic/sparovec/routes"
 	"github.com/viddrobnic/sparovec/service"
 )
 
@@ -55,9 +56,9 @@ func main() {
 	}
 }
 
-func createUser(db *sqlx.DB, log *slog.Logger, username, password string) {
+func createUser(db *sqlx.DB, logger *slog.Logger, username, password string) {
 	usersRepository := repository.NewUsers(db)
-	usersService := service.NewUser(usersRepository, log)
+	usersService := service.NewUser(usersRepository, logger)
 
 	user, err := usersService.Create(context.Background(), username, password)
 	if err != nil {
@@ -69,41 +70,16 @@ func createUser(db *sqlx.DB, log *slog.Logger, username, password string) {
 }
 
 func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
-	router := createRouter(conf)
+	usersRepository := repository.NewUsers(db)
 
-	router.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, "asdf")
-	})
+	authService := service.NewAuth(usersRepository, conf, logger)
 
-	router.GET("/auth/login", func(c echo.Context) error {
-		cookie := &http.Cookie{
-			Name:     "session",
-			Value:    "asdf",
-			Path:     "/",
-			MaxAge:   10 * 24 * 60 * 60,
-			Secure:   true,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-		}
-		c.SetCookie(cookie)
+	authRoutes := routes.NewAuth(authService)
 
-		return c.Redirect(http.StatusSeeOther, "/")
-	})
+	router := createRouter(conf, authService)
+	router.Static("/static", "assets")
 
-	router.GET("/auth/logout", func(c echo.Context) error {
-		cookie := &http.Cookie{
-			Name:     "session",
-			Value:    "",
-			Path:     "/",
-			MaxAge:   -1,
-			Secure:   true,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-		}
-		c.SetCookie(cookie)
-
-		return c.Redirect(http.StatusSeeOther, "/")
-	})
+	authRoutes.Mount(router.Group("/auth"))
 
 	err := router.Start(fmt.Sprintf("%s:%d", conf.API.ListenAddress, conf.API.Port))
 	if err != nil {
@@ -130,7 +106,7 @@ func setupDatabase(conf *config.Config, logger *slog.Logger) (*sqlx.DB, error) {
 	return db, nil
 }
 
-func createRouter(conf *config.Config) *echo.Echo {
+func createRouter(conf *config.Config, authService auth.Service) *echo.Echo {
 	router := echo.New()
 	router.Use(
 		middleware.TimeoutWithConfig(middleware.TimeoutConfig{
@@ -153,24 +129,7 @@ func createRouter(conf *config.Config) *echo.Echo {
 			AllowHeaders: []string{"*"},
 		}),
 		middleware.Secure(),
-		func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(c echo.Context) error {
-				if strings.HasPrefix(c.Request().URL.Path, "/auth") {
-					return next(c)
-				}
-
-				cookie, err := c.Cookie("session")
-				if err != nil {
-					return c.String(http.StatusUnauthorized, "Unauthorized")
-				}
-
-				if cookie.Value != "asdf" {
-					return c.String(http.StatusUnauthorized, "Unauthorized")
-				}
-
-				return next(c)
-			}
-		},
+		auth.CreateMiddleware(authService),
 		middleware.Recover(),
 	)
 

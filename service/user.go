@@ -13,7 +13,7 @@ import (
 const saltLenght = 16
 
 type UserRepository interface {
-	Insert(ctx context.Context, username, password, salt string) (*models.User, error)
+	Insert(ctx context.Context, username, password, salt string) (*models.UserCredentials, error)
 }
 
 type User struct {
@@ -50,7 +50,7 @@ func (u *User) Create(ctx context.Context, username, password string) (*models.U
 		return nil, models.ErrInternalServer
 	}
 
-	return user, nil
+	return &user.User, nil
 }
 
 func hashPassword(password, salt []byte) []byte {

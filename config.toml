@@ -4,6 +4,10 @@ port = 8000
 
 cors_allowed_origins = ["http://localhost:8000"]
 
+[auth]
+session_ttl = 2592000    # 30 days in seconds
+signing_key = "<secret>"
+
 [database]
 location = "db.sqlite"
 

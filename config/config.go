@@ -16,6 +16,11 @@ type API struct {
 	CorsAllowedOrigins []string `mapstructure:"cors_allowed_origins"`
 }
 
+type Auth struct {
+	SessionTtl int    `mapstructure:"session_ttl"`
+	SigningKey string `mapstructure:"signing_key"`
+}
+
 type Database struct {
 	Location string `mapstructure:"location"`
 }
@@ -31,6 +36,7 @@ type Observability struct {
 
 type Config struct {
 	API           API           `mapstructure:"api"`
+	Auth          Auth          `mapstructure:"auth"`
 	Database      Database      `mapstructure:"database"`
 	Observability Observability `mapstructure:"observability"`
 }
