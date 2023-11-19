@@ -77,12 +77,14 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 
 	authRoutes := routes.NewAuth(authService)
 	walletsRoutes := routes.NewWallets(walletsRepository, logger)
+	dashboardRoutes := routes.NewDashboard(walletsRepository, logger)
 
 	router := createRouter(conf, authService)
 	router.Static("/static", "assets")
 
 	authRoutes.Mount(router.Group("/auth"))
 	walletsRoutes.Mount(router.Group(""))
+	dashboardRoutes.Mount(router.Group("/wallets/:walletId"))
 
 	err := router.Start(fmt.Sprintf("%s:%d", conf.API.ListenAddress, conf.API.Port))
 	if err != nil {
@@ -111,12 +113,15 @@ func setupDatabase(conf *config.Config, logger *slog.Logger) (*sqlx.DB, error) {
 
 func createRouter(conf *config.Config, authService auth.Service) *echo.Echo {
 	router := echo.New()
+	router.Pre(middleware.RemoveTrailingSlashWithConfig(middleware.TrailingSlashConfig{
+		RedirectCode: http.StatusTemporaryRedirect,
+	}))
+
 	router.Use(
 		middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 			Timeout: 5 * time.Second,
 		}),
 		middleware.RequestID(),
-		middleware.RemoveTrailingSlash(),
 		middleware.Logger(),
 		middleware.CORSWithConfig(middleware.CORSConfig{
 			AllowOrigins:     conf.API.CorsAllowedOrigins,

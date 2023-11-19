@@ -47,8 +47,7 @@ func (a *Auth) signIn(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/")
 	}
 
-	c.Response().WriteHeader(http.StatusOK)
-	return a.signInTemplate.Execute(c.Response().Writer, nil)
+	return renderTemplate(c, a.signInTemplate, nil)
 }
 
 type submitRequest struct {

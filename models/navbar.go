@@ -7,8 +7,8 @@ type NavbarWallet struct {
 }
 
 type NavbarContext struct {
-	SelectedWallet int
-	Wallets        []NavbarWallet
+	SelectedWalletId int
+	Wallets          []NavbarWallet
 
 	Username string
 }

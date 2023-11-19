@@ -28,7 +28,7 @@ func NewWallets(service WalletsService, log *slog.Logger) *Wallets {
 	walletsTemplate := template.Must(template.ParseFiles(
 		"templates/index.html",
 		"templates/layout.html",
-		"templates/wallets/index.html",
+		"templates/wallets/wallets.html",
 	))
 	template.Must(walletsTemplate.ParseGlob("templates/wallets/components/*"))
 

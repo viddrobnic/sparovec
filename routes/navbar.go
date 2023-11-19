@@ -32,8 +32,8 @@ func createNavbarContext(c echo.Context, walletsService NavbarWalletsService) (*
 	}
 
 	return &models.NavbarContext{
-		SelectedWallet: walletId,
-		Wallets:        navbarWallets,
-		Username:       user.Username,
+		SelectedWalletId: walletId,
+		Wallets:          navbarWallets,
+		Username:         user.Username,
 	}, nil
 }

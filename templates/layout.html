@@ -1,9 +1,20 @@
+{{define "navlist"}}
+<li><a href="/wallets/{{.SelectedWalletId}}">Dashboard</a></li>
+<li>
+  <a href="/wallets/{{.SelectedWalletId}}/transactions">Transactions</a>
+</li>
+<li><a href="/wallets/{{.SelectedWalletId}}/tags">Tags</a></li>
+<li><a href="/wallets/{{.SelectedWalletId}}/settings">Settings</a></li>
+{{end}}
+
+<!---->
+
 {{define "body"}}
 <!---->
 {{with .Navbar}}
 <div class="justify-between shadow navbar bg-base-100">
   <div class="justify-start">
-    {{if .SelectedWallet}}
+    {{if .SelectedWalletId}}
     <div class="dropdown">
       <label tabindex="0" class="md:hidden btn btn-ghost">
         <svg
@@ -25,23 +36,17 @@
         tabindex="0"
         class="p-2 mt-3 w-52 shadow menu menu-md dropdown-content z-[1] bg-base-100 rounded-box"
       >
-        <li><a>Dashboard</a></li>
-        <li><a>Transactions</a></li>
-        <li><a>Tags</a></li>
-        <li><a>Settings</a></li>
+        {{template "navlist" .}}
       </ul>
     </div>
     {{end}}
     <a class="text-xl btn btn-ghost" href="/">Šparovec</a>
   </div>
 
-  {{if .SelectedWallet}}
+  {{if .SelectedWalletId}}
   <div class="hidden md:flex shrink-0">
     <ul class="px-1 menu menu-horizontal">
-      <li><a>Dashboard</a></li>
-      <li><a>Transactions</a></li>
-      <li><a>Tags</a></li>
-      <li><a>Settings</a></li>
+      {{template "navlist" .}}
     </ul>
   </div>
   {{end}}
@@ -61,7 +66,7 @@
       not
       .Wallets}}disabled{{end}}
     >
-      <option disabled {{if not .SelectedWallet}}selected{{end}}>
+      <option disabled {{if not .SelectedWalletId}}selected{{end}}>
         {{if .Wallets}} Select a wallet {{else}} No wallets {{end}}
       </option>
 
