@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.loading-indicator {
+  display: none;
+}
+.htmx-request .loading-indicator {
+  display: inline;
+}
+.htmx-request.loading-indicator {
+  display: inline;
+}

@@ -71,11 +71,12 @@ func createUser(db *sqlx.DB, logger *slog.Logger, username, password string) {
 
 func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	usersRepository := repository.NewUsers(db)
+	walletsRepository := repository.NewWallets(db)
 
 	authService := service.NewAuth(usersRepository, conf, logger)
 
 	authRoutes := routes.NewAuth(authService)
-	walletsRoutes := routes.NewWallets()
+	walletsRoutes := routes.NewWallets(walletsRepository, logger)
 
 	router := createRouter(conf, authService)
 	router.Static("/static", "assets")

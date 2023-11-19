@@ -93,13 +93,13 @@
         class="p-2 mt-3 w-52 shadow z-[1] menu menu-sm dropdown-content bg-base-100 rounded-box"
       >
         <li class="font-normal menu-title">{{.Username}}</li>
-        <li><a href="/auth/logout">Logout</a></li>
+        <li><a href="/auth/sign-out">Logout</a></li>
       </ul>
     </div>
   </div>
 </div>
 {{end}}
-<div class="px-6 pt-3 pb-6 mx-auto w-full max-w-5xl h-full prose">
+<div class="px-6 pt-8 pb-6 mx-auto w-full max-w-5xl">
   {{block "content" .}} {{end}}
 </div>
 {{end}}

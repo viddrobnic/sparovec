@@ -37,6 +37,8 @@ func NewAuth(service AuthService) *Auth {
 func (a *Auth) Mount(group *echo.Group) {
 	group.GET("/sign-in", a.signIn)
 	group.POST("/sign-in", a.submitSignIn)
+
+	group.GET("/sign-out", a.signOut)
 }
 
 func (a *Auth) signIn(c echo.Context) error {
@@ -94,4 +96,19 @@ func (a *Auth) submitSignIn(c echo.Context) error {
 	c.SetCookie(cookie)
 
 	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+func (a *Auth) signOut(c echo.Context) error {
+	cookie := &http.Cookie{
+		Name:     models.SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	c.SetCookie(cookie)
+
+	return c.Redirect(http.StatusSeeOther, "/auth/sign-in")
 }
