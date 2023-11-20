@@ -17,3 +17,12 @@ CREATE TABLE wallet_users (
     wallet_id INTEGER NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, wallet_id)
 );
+
+CREATE TABLE tags (
+    id INTEGER NOT NULL PRIMARY KEY,
+    wallet_id INTEGER NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT (datetime('now')) NOT NULL,
+    UNIQUE(wallet_id, name)
+);
+

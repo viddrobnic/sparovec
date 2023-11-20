@@ -72,12 +72,15 @@ func createUser(db *sqlx.DB, logger *slog.Logger, username, password string) {
 func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	usersRepository := repository.NewUsers(db)
 	walletsRepository := repository.NewWallets(db)
+	tagsRepository := repository.NewTags(db)
 
 	authService := service.NewAuth(usersRepository, conf, logger)
+	tagsService := service.NewTags(tagsRepository, walletsRepository, logger)
 
 	authRoutes := routes.NewAuth(authService)
 	walletsRoutes := routes.NewWallets(walletsRepository, logger)
 	dashboardRoutes := routes.NewDashboard(walletsRepository, logger)
+	tagsRoutes := routes.NewTags(walletsRepository, tagsService, logger)
 
 	router := createRouter(conf, authService)
 	router.Static("/static", "assets")
@@ -85,6 +88,7 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	authRoutes.Mount(router.Group("/auth"))
 	walletsRoutes.Mount(router.Group(""))
 	dashboardRoutes.Mount(router.Group("/wallets/:walletId"))
+	tagsRoutes.Mount(router.Group("/wallets/:walletId/tags"))
 
 	err := router.Start(fmt.Sprintf("%s:%d", conf.API.ListenAddress, conf.API.Port))
 	if err != nil {

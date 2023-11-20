@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/viddrobnic/sparovec/models"
@@ -15,8 +14,7 @@ type NavbarWalletsService interface {
 func createNavbarContext(c echo.Context, walletsService NavbarWalletsService) (*models.NavbarContext, error) {
 	user, _ := c.Get(models.UserContextKey).(*models.User)
 
-	walletId, _ := strconv.Atoi(c.Param("walletId"))
-
+	walletId := getWalletId(c)
 	wallets, err := walletsService.ForUser(c.Request().Context(), user.Id)
 	if err != nil {
 		return nil, err

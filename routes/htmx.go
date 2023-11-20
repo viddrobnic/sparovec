@@ -6,4 +6,5 @@ const (
 
 const (
 	HtmxEventCreateSuccess = "createSuccess"
+	HtmxEventUpdateSuccess = "updateSuccess"
 )

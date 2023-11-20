@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -31,6 +32,30 @@ func (w *Wallets) ForUser(ctx context.Context, userId int) ([]*models.Wallet, er
 	wallets := []*models.Wallet{}
 	err = w.db.SelectContext(ctx, &wallets, stmt, args...)
 	return wallets, err
+}
+
+func (w *Wallets) HasPermission(ctx context.Context, walletId, userId int) (bool, error) {
+	builder := sq.Select("1").
+		From("wallet_users").
+		Where(sq.Eq{
+			"wallet_id": walletId,
+			"user_id":   userId,
+		}).Limit(1)
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return false, err
+	}
+
+	var exists bool
+	err = w.db.GetContext(ctx, &exists, stmt, args...)
+	if err == sql.ErrNoRows {
+		exists = false
+	} else if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
 
 func (w *Wallets) Create(ctx context.Context, userId int, name string) (*models.Wallet, error) {

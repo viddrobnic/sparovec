@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/viddrobnic/sparovec/middleware/auth"
 )
 
 type Dashboard struct {
@@ -32,6 +33,8 @@ func NewDashboard(navbarService NavbarWalletsService, log *slog.Logger) *Dashboa
 }
 
 func (d *Dashboard) Mount(group *echo.Group) {
+	group.Use(auth.RequiredMiddleware)
+
 	group.GET("", d.dashboard)
 
 	group.RouteNotFound("/*", func(c echo.Context) error {

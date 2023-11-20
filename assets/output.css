@@ -1466,6 +1466,20 @@ html {
     border-color: color-mix(in oklab, var(--fallback-p,oklch(var(--p)/1)) 90%, black);
   }
 
+  .btn-outline.btn-warning:hover {
+    --tw-text-opacity: 1;
+    color: var(--fallback-wac,oklch(var(--wac)/var(--tw-text-opacity)));
+    background-color: color-mix(in oklab, var(--fallback-wa,oklch(var(--wa)/1)) 90%, black);
+    border-color: color-mix(in oklab, var(--fallback-wa,oklch(var(--wa)/1)) 90%, black);
+  }
+
+  .btn-outline.btn-error:hover {
+    --tw-text-opacity: 1;
+    color: var(--fallback-erc,oklch(var(--erc)/var(--tw-text-opacity)));
+    background-color: color-mix(in oklab, var(--fallback-er,oklch(var(--er)/1)) 90%, black);
+    border-color: color-mix(in oklab, var(--fallback-er,oklch(var(--er)/1)) 90%, black);
+  }
+
   .btn-disabled:hover,
     .btn[disabled]:hover,
     .btn:disabled:hover {
@@ -1774,6 +1788,14 @@ html {
   .btn-primary {
     --btn-color: var(--fallback-p);
   }
+
+  .btn-warning {
+    --btn-color: var(--fallback-wa);
+  }
+
+  .btn-error {
+    --btn-color: var(--fallback-er);
+  }
 }
 
 .btn:focus-visible {
@@ -1792,6 +1814,26 @@ html {
   .btn-primary {
     --btn-color: var(--p);
   }
+
+  .btn-warning {
+    --btn-color: var(--wa);
+  }
+
+  .btn-error {
+    --btn-color: var(--er);
+  }
+}
+
+.btn-warning {
+  --tw-text-opacity: 1;
+  color: var(--fallback-wac,oklch(var(--wac)/var(--tw-text-opacity)));
+  outline-color: var(--fallback-wa,oklch(var(--wa)/1));
+}
+
+.btn-error {
+  --tw-text-opacity: 1;
+  color: var(--fallback-erc,oklch(var(--erc)/var(--tw-text-opacity)));
+  outline-color: var(--fallback-er,oklch(var(--er)/1));
 }
 
 .btn.glass {
@@ -1832,6 +1874,30 @@ html {
   color: var(--fallback-pc,oklch(var(--pc)/var(--tw-text-opacity)));
   background-color: color-mix(in oklab, var(--fallback-p,oklch(var(--p)/1)) 90%, black);
   border-color: color-mix(in oklab, var(--fallback-p,oklch(var(--p)/1)) 90%, black);
+}
+
+.btn-outline.btn-warning {
+  --tw-text-opacity: 1;
+  color: var(--fallback-wa,oklch(var(--wa)/var(--tw-text-opacity)));
+}
+
+.btn-outline.btn-warning.btn-active {
+  --tw-text-opacity: 1;
+  color: var(--fallback-wac,oklch(var(--wac)/var(--tw-text-opacity)));
+  background-color: color-mix(in oklab, var(--fallback-wa,oklch(var(--wa)/1)) 90%, black);
+  border-color: color-mix(in oklab, var(--fallback-wa,oklch(var(--wa)/1)) 90%, black);
+}
+
+.btn-outline.btn-error {
+  --tw-text-opacity: 1;
+  color: var(--fallback-er,oklch(var(--er)/var(--tw-text-opacity)));
+}
+
+.btn-outline.btn-error.btn-active {
+  --tw-text-opacity: 1;
+  color: var(--fallback-erc,oklch(var(--erc)/var(--tw-text-opacity)));
+  background-color: color-mix(in oklab, var(--fallback-er,oklch(var(--er)/1)) 90%, black);
+  border-color: color-mix(in oklab, var(--fallback-er,oklch(var(--er)/1)) 90%, black);
 }
 
 .btn.btn-disabled,
@@ -2404,6 +2470,20 @@ html {
   border-bottom-color: var(--fallback-bc,oklch(var(--bc)/0.2));
 }
 
+.btn-sm {
+  height: 2rem;
+  min-height: 2rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn-square:where(.btn-sm) {
+  height: 2rem;
+  width: 2rem;
+  padding: 0px;
+}
+
 .btn-circle:where(.btn-xs) {
   height: 1.5rem;
   width: 1.5rem;
@@ -2609,6 +2689,10 @@ html {
   z-index: 1;
 }
 
+.m-1 {
+  margin: 0.25rem;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -2624,6 +2708,10 @@ html {
 
 .mt-6 {
   margin-top: 1.5rem;
+}
+
+.mr-2 {
+  margin-right: 0.5rem;
 }
 
 .block {
@@ -2658,6 +2746,10 @@ html {
   height: 100vh;
 }
 
+.h-4 {
+  height: 1rem;
+}
+
 .min-h-screen {
   min-height: 100vh;
 }
@@ -2682,6 +2774,10 @@ html {
   width: 100%;
 }
 
+.w-4 {
+  width: 1rem;
+}
+
 .max-w-5xl {
   max-width: 64rem;
 }
@@ -2692,6 +2788,10 @@ html {
 
 .max-w-xs {
   max-width: 20rem;
+}
+
+.max-w-full {
+  max-width: 100%;
 }
 
 .flex-auto {
@@ -2712,6 +2812,10 @@ html {
 
 .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.flex-row {
+  flex-direction: row;
 }
 
 .flex-col {
@@ -2746,6 +2850,14 @@ html {
   gap: 1.25rem;
 }
 
+.gap-1 {
+  gap: 0.25rem;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
 .space-x-2 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 0;
   margin-right: calc(0.5rem * var(--tw-space-x-reverse));
@@ -2758,8 +2870,20 @@ html {
   margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));
 }
 
+.overflow-hidden {
+  overflow: hidden;
+}
+
 .overflow-ellipsis {
   text-overflow: ellipsis;
+}
+
+.text-ellipsis {
+  text-overflow: ellipsis;
+}
+
+.whitespace-nowrap {
+  white-space: nowrap;
 }
 
 .rounded-box {
@@ -2818,6 +2942,10 @@ html {
 
 .pt-8 {
   padding-top: 2rem;
+}
+
+.pt-4 {
+  padding-top: 1rem;
 }
 
 .text-5xl {
