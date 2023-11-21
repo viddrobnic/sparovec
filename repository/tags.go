@@ -78,3 +78,15 @@ func (t *Tags) Update(ctx context.Context, tagId int, name string) (*models.Tag,
 	err = t.db.GetContext(ctx, tag, stmt, args...)
 	return tag, err
 }
+
+func (t *Tags) Delete(ctx context.Context, tagId int) error {
+	builder := sq.Delete("tags").Where("id = ?", tagId)
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = t.db.ExecContext(ctx, stmt, args...)
+	return err
+}

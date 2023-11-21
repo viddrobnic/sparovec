@@ -12,6 +12,7 @@ type TagsRepository interface {
 	Create(ctx context.Context, walletId int, name string) (*models.Tag, error)
 	Get(ctx context.Context, tagId int) (*models.Tag, error)
 	Update(ctx context.Context, tagId int, name string) (*models.Tag, error)
+	Delete(ctx context.Context, tagId int) error
 }
 
 type TagsWalletRepository interface {
@@ -72,27 +73,55 @@ func (t *Tags) Create(ctx context.Context, walletId int, name string, user *mode
 }
 
 func (t *Tags) Update(ctx context.Context, tagId int, name string, user *models.User) (*models.Tag, error) {
-	tag, err := t.tagsRepository.Get(ctx, tagId)
+	hasPermission, err := t.hasPermission(ctx, tagId, user)
 	if err != nil {
-		t.log.ErrorContext(ctx, "Failed to get tag", "error", err)
-		return nil, models.ErrInternalServer
-	}
-
-	hasPermission, err := t.walletRepository.HasPermission(ctx, tag.WalletId, user.Id)
-	if err != nil {
-		t.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
-		return nil, models.ErrInternalServer
+		return nil, err
 	}
 
 	if !hasPermission {
 		return nil, models.ErrForbidden
 	}
 
-	tag, err = t.tagsRepository.Update(ctx, tagId, name)
+	tag, err := t.tagsRepository.Update(ctx, tagId, name)
 	if err != nil {
 		t.log.ErrorContext(ctx, "Failed to update tag", "error", err)
 		return nil, models.ErrInternalServer
 	}
 
 	return tag, nil
+}
+
+func (t *Tags) Delete(ctx context.Context, tagId int, user *models.User) error {
+	hasPermission, err := t.hasPermission(ctx, tagId, user)
+	if err != nil {
+		return err
+	}
+
+	if !hasPermission {
+		return models.ErrForbidden
+	}
+
+	err = t.tagsRepository.Delete(ctx, tagId)
+	if err != nil {
+		t.log.ErrorContext(ctx, "Failed to delete tag", "error", err)
+		return models.ErrInternalServer
+	}
+
+	return nil
+}
+
+func (t *Tags) hasPermission(ctx context.Context, tagId int, user *models.User) (bool, error) {
+	tag, err := t.tagsRepository.Get(ctx, tagId)
+	if err != nil {
+		t.log.ErrorContext(ctx, "Failed to get tag", "error", err)
+		return false, models.ErrInternalServer
+	}
+
+	hasPermission, err := t.walletRepository.HasPermission(ctx, tag.WalletId, user.Id)
+	if err != nil {
+		t.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
+		return false, models.ErrInternalServer
+	}
+
+	return hasPermission, nil
 }

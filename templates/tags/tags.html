@@ -127,7 +127,7 @@
     </p>
     <form
       id="delete_tag_form"
-      hx-delete="/wallets/{{.Navbar.SelectedWalletId}}/tags"
+      hx-post="/wallets/{{.Navbar.SelectedWalletId}}/tags/delete"
       hx-swap="outerHTML"
       hx-target="#tags_grid"
       hx-select="#tags_grid"
@@ -164,6 +164,12 @@
   document.body.addEventListener("updateSuccess", function (evt) {
     update_tag_modal.close();
     document.getElementById("update_tag_form").reset();
+  });
+
+  // Close delete modal and reset form on success
+  document.body.addEventListener("deleteSuccess", function (evt) {
+    delete_tag_modal.close();
+    document.getElementById("delete_tag_form").reset();
   });
 
   function show_update_tag_modal(id, name) {

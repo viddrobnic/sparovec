@@ -15,6 +15,7 @@ type TagsService interface {
 	List(ctx context.Context, walletId int, user *models.User) ([]*models.Tag, error)
 	Create(ctx context.Context, walletId int, name string, user *models.User) (*models.Tag, error)
 	Update(ctx context.Context, tagId int, name string, user *models.User) (*models.Tag, error)
+	Delete(ctx context.Context, tagId int, user *models.User) error
 }
 
 type Tags struct {
@@ -53,6 +54,7 @@ func (t *Tags) Mount(group *echo.Group) {
 	group.GET("", t.tags)
 	group.POST("", t.createTag)
 	group.PUT("", t.updateTag)
+	group.POST("/delete", t.deleteTag)
 
 	group.RouteNotFound("/*", func(c echo.Context) error {
 		// TODO: Better not found
@@ -129,5 +131,31 @@ func (t *Tags) updateTag(c echo.Context) error {
 	}
 
 	c.Response().Header().Set(HtmxHeaderTriggerAfterSettle, HtmxEventUpdateSuccess)
+	return t.tags(c)
+}
+
+type deleteTagForm struct {
+	Id int `form:"id"`
+}
+
+func (t *Tags) deleteTag(c echo.Context) error {
+	user, _ := c.Get(models.UserContextKey).(*models.User)
+
+	var req deleteTagForm
+	if err := c.Bind(&req); err != nil {
+		return err
+	}
+
+	err := t.tagsService.Delete(c.Request().Context(), req.Id, user)
+	if err == echo.ErrForbidden {
+		return c.Redirect(http.StatusSeeOther, "/")
+	} else if err != nil {
+		t.log.Error("Failed to delete tag", "error", err)
+
+		// TODO: Better error handling
+		return err
+	}
+
+	c.Response().Header().Set(HtmxHeaderTriggerAfterSettle, HtmxEventDeleteSuccess)
 	return t.tags(c)
 }
