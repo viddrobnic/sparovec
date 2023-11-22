@@ -1,0 +1,61 @@
+{{define "title"}}Šparovec | Tags{{end}}
+
+<!---->
+
+{{define "content"}}
+<div class="flex flex-wrap gap-5 justify-between items-center">
+  <h1 class="text-5xl font-semibold">Transactions</h1>
+  <button
+    class="shadow-lg btn btn-primary"
+    onclick="create_transaction_dialog.showModal()"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="mr-2 w-6 h-6"
+    >
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </svg>
+
+    Add Transaction
+  </button>
+</div>
+
+<div class="overflow-x-auto mt-6 shadow-lg card bg-base-100 overflow-y-clip">
+  <div class="card-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th class="text-end">Value</th>
+          <th>Tags</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Transactions}}
+        <!---->
+        {{template "transaction-row" .}}
+        <!---->
+        {{else}}
+        <tr>
+          <td colspan="5" class="text-lg font-light text-center">
+            No transactions
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{{template "add-transaction-dialog"}}
+<!---->
+{{end}}

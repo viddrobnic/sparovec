@@ -1,11 +1,18 @@
-{{define "tag-card"}}
-<div class="shadow-lg card bg-base-100">
-  <div class="flex-row justify-between items-center card-body">
-    <h2
-      class="inline-block overflow-hidden max-w-full whitespace-nowrap card-title text-ellipsis"
+{{define "transaction-row"}}
+<tr class="hover">
+  <td>{{.Name}}</td>
+  <td class="font-semibold whitespace-nowrap text-end">{{.Value}}</td>
+  <td>
+    <div
+      class="inline-flex flex-nowrap items-center py-0.5 px-2.5 text-sm whitespace-nowrap rounded-lg border border-neutral-content bg-base-100"
     >
-      {{.Name}}
-    </h2>
+      {{.TagName}}
+    </div>
+  </td>
+  <td class="font-light text-gray-600 whitespace-nowrap whitespace">
+    {{.CreatedAt}}
+  </td>
+  <td class="text-end">
     <div class="dropdown dropdown-end">
       <label tabindex="0" class="btn btn-ghost btn-circle btn-sm">
         <svg
@@ -28,7 +35,7 @@
         class="p-2 w-52 shadow dropdown-content z-[1] menu bg-base-100 rounded-box"
       >
         <li>
-          <button onclick="show_update_tag_modal({{.Id}}, {{.Name}})">
+          <button onclick="">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -47,7 +54,7 @@
           </button>
         </li>
         <li>
-          <button onclick="show_delete_tag_modal({{.Id}}, {{.Name}})">
+          <button onclick="">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -70,6 +77,6 @@
         </li>
       </ul>
     </div>
-  </div>
-</div>
+  </td>
+</tr>
 {{end}}

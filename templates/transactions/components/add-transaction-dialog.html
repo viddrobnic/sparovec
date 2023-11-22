@@ -1,0 +1,38 @@
+{{define "add-transaction-dialog"}}
+<dialog id="create_transaction_dialog" class="modal">
+  <div class="max-w-sm modal-box">
+    <h3 class="text-lg font-bold">Add a Transaction</h3>
+    <form id="create_transaction_form" class="py-4">
+      <input
+        name="name"
+        type="text"
+        class="w-full input input-bordered"
+        placeholder="Transaction Name"
+        required
+      />
+      <div class="justify-between modal-action">
+        <button
+          type="button"
+          class="btn"
+          onclick="create_transaction_dialog.close()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          id="create_transaction_button"
+        >
+          <span
+            class="loading loading-spinner loading-xs loading-indicator"
+          ></span>
+          Create
+        </button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+{{end}}
