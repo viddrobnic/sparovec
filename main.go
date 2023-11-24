@@ -73,15 +73,17 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	usersRepository := repository.NewUsers(db)
 	walletsRepository := repository.NewWallets(db)
 	tagsRepository := repository.NewTags(db)
+	transactionRepository := repository.NewTransaction(db)
 
 	authService := service.NewAuth(usersRepository, conf, logger)
 	tagsService := service.NewTags(tagsRepository, walletsRepository, logger)
+	transactionService := service.NewTransaction(transactionRepository, tagsRepository, logger)
 
 	authRoutes := routes.NewAuth(authService)
 	walletsRoutes := routes.NewWallets(walletsRepository, logger)
 	dashboardRoutes := routes.NewDashboard(walletsRepository, logger)
 	tagsRoutes := routes.NewTags(walletsRepository, tagsService, logger)
-	transactionsRoutes := routes.NewTransactions(walletsRepository, logger)
+	transactionsRoutes := routes.NewTransactions(walletsRepository, transactionService, logger)
 
 	router := createRouter(conf, authService)
 	router.Static("/static", "assets")

@@ -5,10 +5,7 @@
 {{define "content"}}
 <div class="flex flex-wrap gap-5 justify-between items-center">
   <h1 class="text-5xl font-semibold">Transactions</h1>
-  <button
-    class="shadow-lg btn btn-primary"
-    onclick="create_transaction_dialog.showModal()"
-  >
+  <button class="shadow-lg btn btn-primary" onclick="show_create_dialog()">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
@@ -39,7 +36,7 @@
           <th></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="transactions_table">
         {{range .Transactions}}
         <!---->
         {{template "transaction-row" .}}
@@ -56,6 +53,57 @@
   </div>
 </div>
 
-{{template "add-transaction-dialog"}}
-<!---->
+{{template "transaction-dialog" .}}
+
+<script>
+  function show_create_dialog() {
+    transaction_form.reset();
+
+    transaction_submit_type.value = "create";
+
+    transaction_alert.style.display = "none";
+    transaction_dialog.showModal();
+  }
+
+  /**
+   * @typedef Transaction
+   * @type {object}
+   * @property {number} id
+   * @property {string} name
+   * @property {(create|update)} type
+   * @property {string} value
+   * @property {string} date
+   * @property {string} tag
+   */
+
+  /**
+   * @param {Transaction} transaction
+   */
+  function show_update_dialog(transaction) {
+    transaction_form.reset();
+
+    transaction_submit_type.value = "update";
+    transaction_id.value = transaction.id;
+    transaction_name.value = transaction.name;
+    transaction_type_outcome.checked = transaction.type === "outcome";
+    transaction_type_income.checked = transaction.type === "income";
+    transaction_value.value = transaction.value;
+    transaction_date.value = transaction.date;
+    transaction_tag.value = transaction.tag;
+
+    transaction_dialog.showModal();
+  }
+
+  // Handle save errors
+  document.body.addEventListener("saveError", function (evt) {
+    transaction_alert_message.innerHTML = evt.detail.value;
+    transaction_alert.style.display = "grid";
+  });
+
+  // Handle save success
+  document.body.addEventListener("saveSuccess", function (evt) {
+    transaction_dialog.close();
+  });
+</script>
+
 {{end}}

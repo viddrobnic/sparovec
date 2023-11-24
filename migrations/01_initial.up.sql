@@ -26,3 +26,11 @@ CREATE TABLE tags (
     UNIQUE(wallet_id, name)
 );
 
+CREATE TABLE transactions (
+    id INTEGER NOT NULL PRIMARY KEY,
+    wallet_id INTEGER NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    value INTEGER NOT NULL,
+    tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+    created_at DATETIME DEFAULT (datetime('now')) NOT NULL
+);
