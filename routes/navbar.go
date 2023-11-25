@@ -2,8 +2,9 @@ package routes
 
 import (
 	"context"
+	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/models"
 )
 
@@ -11,11 +12,11 @@ type NavbarWalletsService interface {
 	ForUser(ctx context.Context, userId int) ([]*models.Wallet, error)
 }
 
-func createNavbarContext(c echo.Context, walletsService NavbarWalletsService) (*models.NavbarContext, error) {
-	user, _ := c.Get(models.UserContextKey).(*models.User)
+func createNavbarContext(r *http.Request, walletsService NavbarWalletsService) (*models.NavbarContext, error) {
+	user := auth.GetUser(r)
 
-	walletId := getWalletId(c)
-	wallets, err := walletsService.ForUser(c.Request().Context(), user.Id)
+	walletId := getWalletId(r)
+	wallets, err := walletsService.ForUser(r.Context(), user.Id)
 	if err != nil {
 		return nil, err
 	}

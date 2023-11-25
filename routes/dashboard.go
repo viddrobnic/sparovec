@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/go-chi/chi/v5"
 	"github.com/viddrobnic/sparovec/middleware/auth"
 )
 
@@ -32,23 +32,25 @@ func NewDashboard(navbarService NavbarWalletsService, log *slog.Logger) *Dashboa
 	}
 }
 
-func (d *Dashboard) Mount(group *echo.Group) {
+func (d *Dashboard) Mount(router chi.Router) {
+	group := chi.NewRouter()
 	group.Use(auth.RequiredMiddleware)
 
-	group.GET("", d.dashboard)
+	group.Get("/", d.dashboard)
 
-	group.RouteNotFound("/*", func(c echo.Context) error {
-		// TODO: Better not found
-		return c.NoContent(http.StatusNotFound)
-	})
+	router.Mount("/wallets/{walletId}", group)
 }
 
-func (d *Dashboard) dashboard(c echo.Context) error {
-	navbarCtx, err := createNavbarContext(c, d.navbarService)
+func (d *Dashboard) dashboard(w http.ResponseWriter, r *http.Request) {
+	navbarCtx, err := createNavbarContext(r, d.navbarService)
 	if err != nil {
 		d.log.Error("Failed to create navbar context", "error", err)
-		return err
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
-	return renderTemplate(c, d.dashboardTemplate, map[string]any{"Navbar": navbarCtx})
+	err = renderTemplate(w, d.dashboardTemplate, map[string]any{"Navbar": navbarCtx})
+	if err != nil {
+		d.log.Error("Failed to render template", "error", err)
+	}
 }

@@ -5,22 +5,22 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/labstack/echo/v4"
+	"github.com/go-chi/chi/v5"
 )
 
-func renderTemplate(c echo.Context, tmpl *template.Template, data any) error {
-	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
-	c.Response().WriteHeader(http.StatusOK)
-	return tmpl.Execute(c.Response().Writer, data)
+func renderTemplate(w http.ResponseWriter, tmpl *template.Template, data any) error {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	return tmpl.Execute(w, data)
 }
 
-func renderTemplateNamed(c echo.Context, tmpl *template.Template, name string, data any) error {
-	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
-	c.Response().WriteHeader(http.StatusOK)
-	return tmpl.ExecuteTemplate(c.Response().Writer, name, data)
+func renderTemplateNamed(w http.ResponseWriter, tmpl *template.Template, name string, data any) error {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	return tmpl.ExecuteTemplate(w, name, data)
 }
 
-func getWalletId(c echo.Context) int {
-	walletId, _ := strconv.Atoi(c.Param("walletId"))
+func getWalletId(r *http.Request) int {
+	walletId, _ := strconv.Atoi(chi.URLParam(r, "walletId"))
 	return walletId
 }

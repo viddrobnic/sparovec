@@ -1,7 +1,3 @@
 package models
 
-const (
-	SessionCookieName = "session"
-
-	UserContextKey = "authenticated-user"
-)
+const SessionCookieName = "session"

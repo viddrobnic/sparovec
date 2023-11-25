@@ -9,9 +9,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/database"
 	"github.com/viddrobnic/sparovec/middleware/auth"
@@ -79,22 +80,22 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	tagsService := service.NewTags(tagsRepository, walletsRepository, logger)
 	transactionService := service.NewTransaction(transactionRepository, tagsRepository, walletsRepository, logger)
 
-	authRoutes := routes.NewAuth(authService)
+	authRoutes := routes.NewAuth(authService, logger.With("where", "auth_router"))
 	walletsRoutes := routes.NewWallets(walletsRepository, logger)
 	dashboardRoutes := routes.NewDashboard(walletsRepository, logger)
 	tagsRoutes := routes.NewTags(walletsRepository, tagsService, logger)
 	transactionsRoutes := routes.NewTransactions(walletsRepository, transactionService, tagsService, logger)
 
 	router := createRouter(conf, authService)
-	router.Static("/static", "assets")
+	router.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("assets"))))
 
-	authRoutes.Mount(router.Group("/auth"))
-	walletsRoutes.Mount(router.Group(""))
-	dashboardRoutes.Mount(router.Group("/wallets/:walletId"))
-	tagsRoutes.Mount(router.Group("/wallets/:walletId/tags"))
-	transactionsRoutes.Mount(router.Group("/wallets/:walletId/transactions"))
+	authRoutes.Mount(router)
+	walletsRoutes.Mount(router)
+	dashboardRoutes.Mount(router)
+	tagsRoutes.Mount(router)
+	transactionsRoutes.Mount(router)
 
-	err := router.Start(fmt.Sprintf("%s:%d", conf.API.ListenAddress, conf.API.Port))
+	err := http.ListenAndServe(fmt.Sprintf("%s:%d", conf.API.ListenAddress, conf.API.Port), router)
 	if err != nil {
 		logger.Error("Failed to start server", "error", err)
 		return
@@ -119,22 +120,16 @@ func setupDatabase(conf *config.Config, logger *slog.Logger) (*sqlx.DB, error) {
 	return db, nil
 }
 
-func createRouter(conf *config.Config, authService auth.Service) *echo.Echo {
-	router := echo.New()
-	router.Pre(middleware.RemoveTrailingSlashWithConfig(middleware.TrailingSlashConfig{
-		RedirectCode: http.StatusTemporaryRedirect,
-	}))
-
+func createRouter(conf *config.Config, authService auth.Service) chi.Router {
+	router := chi.NewRouter()
 	router.Use(
-		middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-			Timeout: 5 * time.Second,
-		}),
-		middleware.RequestID(),
-		middleware.Logger(),
-		middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins:     conf.API.CorsAllowedOrigins,
+		middleware.RequestID,
+		middleware.RealIP,
+		middleware.StripSlashes,
+		cors.Handler(cors.Options{
+			AllowedOrigins:   conf.API.CorsAllowedOrigins,
 			AllowCredentials: true,
-			AllowMethods: []string{
+			AllowedMethods: []string{
 				http.MethodGet,
 				http.MethodHead,
 				http.MethodPost,
@@ -142,11 +137,12 @@ func createRouter(conf *config.Config, authService auth.Service) *echo.Echo {
 				http.MethodPatch,
 				http.MethodDelete,
 			},
-			AllowHeaders: []string{"*"},
+			AllowedHeaders: []string{"*"},
 		}),
-		middleware.Secure(),
+		middleware.Logger,
+		middleware.Timeout(5*time.Second),
 		auth.CreateMiddleware(authService),
-		middleware.Recover(),
+		middleware.Recoverer,
 	)
 
 	return router

@@ -4,8 +4,9 @@ import (
 	"context"
 	"html/template"
 	"log/slog"
+	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/go-chi/chi/v5"
 	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/models"
 )
@@ -43,26 +44,31 @@ func NewWallets(service WalletsService, log *slog.Logger) *Wallets {
 	}
 }
 
-func (w *Wallets) Mount(group *echo.Group) {
+func (wlts *Wallets) Mount(router chi.Router) {
+	group := chi.NewRouter()
 	group.Use(auth.RequiredMiddleware)
 
-	group.GET("/", w.wallets)
-	group.POST("/", w.createWallet)
+	group.Get("/", wlts.wallets)
+	group.Post("/", wlts.createWallet)
+
+	router.Mount("/", group)
 }
 
-func (w *Wallets) wallets(c echo.Context) error {
-	user, _ := c.Get(models.UserContextKey).(*models.User)
+func (wlts *Wallets) wallets(w http.ResponseWriter, r *http.Request) {
+	user := auth.GetUser(r)
 
-	navbarCtx, err := createNavbarContext(c, w.service)
+	navbarCtx, err := createNavbarContext(r, wlts.service)
 	if err != nil {
-		w.log.Error("Failed to create navbar context", "error", err)
-		return err
+		wlts.log.Error("Failed to create navbar context", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
-	wallets, err := w.service.ForUser(c.Request().Context(), user.Id)
+	wallets, err := wlts.service.ForUser(r.Context(), user.Id)
 	if err != nil {
-		w.log.Error("Failed to get wallets", "error", err)
-		return err
+		wlts.log.Error("Failed to get wallets", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
 	ctx := &models.WalletsContext{
@@ -70,21 +76,26 @@ func (w *Wallets) wallets(c echo.Context) error {
 		Wallets: wallets,
 	}
 
-	return renderTemplate(c, w.walletsTemplate, ctx)
+	err = renderTemplate(w, wlts.walletsTemplate, ctx)
+	if err != nil {
+		wlts.log.Error("Failed to render template", "error", err)
+	}
 }
 
-func (w Wallets) createWallet(c echo.Context) error {
-	user, _ := c.Get(models.UserContextKey).(*models.User)
-	name := c.FormValue("name")
+func (wlts Wallets) createWallet(w http.ResponseWriter, r *http.Request) {
+	user := auth.GetUser(r)
+	name := r.FormValue("name")
 
-	wallet, err := w.service.Create(c.Request().Context(), user.Id, name)
+	wallet, err := wlts.service.Create(r.Context(), user.Id, name)
 	if err != nil {
-		w.log.Error("Failed to create wallet", "error", err)
-
-		// TODO: Better error handling
-		return err
+		wlts.log.Error("Failed to create wallet", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
-	c.Response().Header().Set(HtmxHeaderTriggerAfterSettle, HtmxEventCreateSuccess)
-	return renderTemplateNamed(c, w.walletCardTemplate, "wallet-card", wallet)
+	w.Header().Set(HtmxHeaderTriggerAfterSettle, HtmxEventCreateSuccess)
+	err = renderTemplateNamed(w, wlts.walletCardTemplate, "wallet-card", wallet)
+	if err != nil {
+		wlts.log.Error("Failed to render template", "error", err)
+	}
 }

@@ -4,19 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"log/slog"
 	"math"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/go-chi/chi/v5"
 	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/models"
 )
 
 type TransactionService interface {
-	SaveTransaction(ctx context.Context, transaction *models.SaveTransactionForm, walletId int, user *models.User) (*models.Transaction, error)
+	Create(ctx context.Context, transaction *models.Transaction, user *models.User) error
+	Update(ctx context.Context, transaction *models.Transaction, user *models.User) error
 	List(ctx context.Context, req *models.TransactionsListRequest, user *models.User) (*models.PaginatedResponse[*models.Transaction], error)
 }
 
@@ -57,16 +60,14 @@ func NewTransactions(
 	}
 }
 
-func (t *Transactions) Mount(group *echo.Group) {
+func (t *Transactions) Mount(router chi.Router) {
+	group := chi.NewRouter()
 	group.Use(auth.RequiredMiddleware)
 
-	group.GET("", t.transactions)
-	group.POST("", t.saveTransaction)
+	group.Get("/", t.transactions)
+	group.Post("/", t.saveTransaction)
 
-	group.RouteNotFound("/*", func(c echo.Context) error {
-		// TODO: Better not found
-		return c.NoContent(http.StatusNotFound)
-	})
+	router.Mount("/wallets/{walletId}/transactions", group)
 }
 
 type listTransactionsForm struct {
@@ -74,42 +75,53 @@ type listTransactionsForm struct {
 	PageSize int `query:"page_size"`
 }
 
-func (t *Transactions) transactions(c echo.Context) error {
-	user, _ := c.Get(models.UserContextKey).(*models.User)
+func listTransactionFormFromRequest(r *http.Request) *listTransactionsForm {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 
-	walletId := getWalletId(c)
-
-	form := &listTransactionsForm{}
-	if err := c.Bind(form); err != nil {
-		return err
+	return &listTransactionsForm{
+		Page:     page,
+		PageSize: pageSize,
 	}
-
-	return t.renderTransactions(c, form, walletId, user)
 }
 
-func (t *Transactions) renderTransactions(c echo.Context, form *listTransactionsForm, walletId int, user *models.User) error {
+func (t *Transactions) transactions(w http.ResponseWriter, r *http.Request) {
+	user := auth.GetUser(r)
+	walletId := getWalletId(r)
+
+	form := listTransactionFormFromRequest(r)
+
 	req := &models.TransactionsListRequest{
 		WalletId: walletId,
 		Page:     models.NewPage(form.Page, form.PageSize),
 	}
 
-	paginatedTransactions, err := t.transactionService.List(c.Request().Context(), req, user)
+	// Get transactions
+	paginatedTransactions, err := t.transactionService.List(r.Context(), req, user)
 	if err != nil {
-		return err
+		t.log.Error("Failed to list transactions", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
+	// Get tags
+	tags, err := t.tagsService.List(r.Context(), walletId, user)
+	if err != nil {
+		t.log.Error("Failed to list tags", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Get navbar context
+	navbarCtx, err := createNavbarContext(r, t.navbarService)
+	if err != nil {
+		t.log.ErrorContext(r.Context(), "Failed to create navbar context", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Calculate number of pages
 	pages := int(math.Ceil(float64(paginatedTransactions.Count) / float64(req.Page.PageSize)))
-
-	tags, err := t.tagsService.List(c.Request().Context(), walletId, user)
-	if err != nil {
-		return err
-	}
-
-	navbarCtx, err := createNavbarContext(c, t.navbarService)
-	if err != nil {
-		t.log.ErrorContext(c.Request().Context(), "Failed to create navbar context", "error", err)
-		return err
-	}
 
 	ctx := &models.TransactionsContext{
 		Navbar:       navbarCtx,
@@ -120,49 +132,145 @@ func (t *Transactions) renderTransactions(c echo.Context, form *listTransactions
 		TotalPages:   pages,
 	}
 
-	fmt.Println(ctx)
-
-	return t.transactionsTemplate.Execute(c.Response().Writer, ctx)
+	err = t.transactionsTemplate.Execute(w, ctx)
+	if err != nil {
+		t.log.Error("Failed to render template", "error", err)
+	}
 }
+
+type transactionFormSubmitType string
+
+const (
+	transactionFormSubmitTypeCreate transactionFormSubmitType = "create"
+	transactionFormSubmitTypeEdit   transactionFormSubmitType = "update"
+)
+
+type transactionType string
+
+const (
+	transactionTypeOutcome transactionType = "outcome"
+	transactionTypeIncome  transactionType = "income"
+)
 
 type saveTransactionForm struct {
-	listTransactionsForm
-	models.SaveTransactionForm
+	Id         int                       `form:"id"`
+	SubmitType transactionFormSubmitType `form:"submit_type"`
+	Name       string                    `form:"name"`
+	Type       transactionType           `form:"type"`
+	Value      string                    `form:"value"`
+	TagId      string                    `form:"tag"`
+	Date       string                    `form:"date"`
 }
 
-func (t *Transactions) saveTransaction(c echo.Context) error {
-	user, _ := c.Get(models.UserContextKey).(*models.User)
-
-	walletId := getWalletId(c)
-
-	form := &saveTransactionForm{}
-	if err := c.Bind(form); err != nil {
-		return err
-	}
-
-	_, err := t.transactionService.SaveTransaction(c.Request().Context(), &form.SaveTransactionForm, walletId, user)
+func (f *saveTransactionForm) parse(walletId int) (*models.Transaction, error) {
+	// Parse value
+	valueStr := strings.ReplaceAll(f.Value, ",", ".")
+	valueF, err := strconv.ParseFloat(valueStr, 64)
 	if err != nil {
-		var invalidForm *models.ErrInvalidForm
-		if errors.As(err, &invalidForm) {
-			saveError := HtmxEventSaveError{ErrorMessage: invalidForm.Message}
-			saveErrorJson, err := json.Marshal(saveError)
-			if err != nil {
-				t.log.Error("Failed to marshal save error", "error", err)
-				return err
-			}
-
-			c.Response().Header().Set(HtmxHeaderReswap, HtmxSwapNone)
-			c.Response().Header().Set(HtmxHeaderTriggerAfterSettle, string(saveErrorJson))
-
-			return c.String(http.StatusOK, "save error")
-		} else {
-			return err
-		}
+		return nil, &models.ErrInvalidForm{Message: "Value is not a number"}
 	}
 
-	fmt.Println(form.listTransactionsForm)
-	fmt.Println(c.Request().URL.Query())
+	value := int(math.Round(valueF * 100))
+	if value < 0 {
+		return nil, &models.ErrInvalidForm{Message: "Value must be positive"}
+	}
 
-	c.Response().Header().Set(HtmxHeaderTriggerAfterSettle, HtmxEventSaveSuccess)
-	return t.renderTransactions(c, &form.listTransactionsForm, walletId, user)
+	if f.Type == transactionTypeOutcome {
+		value *= -1
+	}
+
+	// Parse date
+	date, err := time.Parse("2006-01-02", f.Date)
+	if err != nil {
+		return nil, &models.ErrInvalidForm{Message: "Invalid date"}
+	}
+
+	// Parse tag
+	var tag *models.Tag
+	if f.TagId != "" {
+		tagId, err := strconv.Atoi(f.TagId)
+		if err != nil {
+			return nil, &models.ErrInvalidForm{Message: "Invalid tag"}
+		}
+
+		tag = &models.Tag{Id: tagId}
+	}
+
+	return &models.Transaction{
+		Id:        f.Id,
+		WalletId:  walletId,
+		Name:      f.Name,
+		Value:     value,
+		CreatedAt: date,
+		Tag:       tag,
+	}, nil
+}
+
+func saveTransactionFormFromRequest(r *http.Request) *saveTransactionForm {
+	id, _ := strconv.Atoi(r.FormValue("id"))
+	submitType := transactionFormSubmitType(r.FormValue("submit_type"))
+	transactionType := transactionType(r.FormValue("type"))
+
+	return &saveTransactionForm{
+		Id:         id,
+		SubmitType: submitType,
+		Name:       r.FormValue("name"),
+		Type:       transactionType,
+		Value:      r.FormValue("value"),
+		TagId:      r.FormValue("tag"),
+		Date:       r.FormValue("date"),
+	}
+}
+
+func (t *Transactions) saveTransaction(w http.ResponseWriter, r *http.Request) {
+	user := auth.GetUser(r)
+	walletId := getWalletId(r)
+
+	form := saveTransactionFormFromRequest(r)
+	transaction, err := form.parse(walletId)
+	if err != nil {
+		t.handleError(w, err)
+		return
+	}
+
+	switch form.SubmitType {
+	case transactionFormSubmitTypeCreate:
+		err = t.transactionService.Create(r.Context(), transaction, user)
+	case transactionFormSubmitTypeEdit:
+		err = t.transactionService.Update(r.Context(), transaction, user)
+	default:
+		t.log.Error("Invalid submit type", "submit_type", form.SubmitType)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if err != nil {
+		t.handleError(w, err)
+		return
+	}
+
+	w.Header().Set(HtmxHeaderTriggerAfterSettle, HtmxEventSaveSuccess)
+	t.transactions(w, r)
+}
+
+func (t *Transactions) handleError(w http.ResponseWriter, err error) {
+	var invalidForm *models.ErrInvalidForm
+	if errors.As(err, &invalidForm) {
+		saveError := HtmxEventSaveError{ErrorMessage: invalidForm.Message}
+		saveErrorJson, err := json.Marshal(saveError)
+		if err != nil {
+			t.log.Error("Failed to marshal save error", "error", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set(HtmxHeaderReswap, HtmxSwapNone)
+		w.Header().Set(HtmxHeaderTriggerAfterSettle, string(saveErrorJson))
+
+		w.WriteHeader(http.StatusOK)
+	} else {
+		t.log.Error("Failed to save transaction", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }

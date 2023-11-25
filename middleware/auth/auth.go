@@ -1,50 +1,67 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
 	"github.com/viddrobnic/sparovec/models"
 )
+
+type contextKey string
+
+const contextKeyUser = contextKey("user")
 
 type Service interface {
 	ValidateSession(session *models.Session) error
 }
 
-func CreateMiddleware(service Service) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			cookie, err := c.Cookie(models.SessionCookieName)
+func CreateMiddleware(service Service) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie(models.SessionCookieName)
 			if err != nil {
-				return next(c)
+				next.ServeHTTP(w, r)
+				return
 			}
 
 			session, err := models.SessionFromCookie(cookie.Value)
 			if err != nil {
-				return next(c)
+				next.ServeHTTP(w, r)
+				return
 			}
 
 			if err := service.ValidateSession(session); err != nil {
-				return next(c)
+				next.ServeHTTP(w, r)
+				return
 			}
 
-			c.Set(models.UserContextKey, session.User)
-			return next(c)
-		}
+			ctx := context.WithValue(r.Context(), contextKeyUser, session.User)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
 
-func RequiredMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		user := c.Get(models.UserContextKey)
+func RequiredMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := GetUser(r)
 		if user == nil {
-			return c.Redirect(http.StatusSeeOther, "/auth/sign-in")
+			http.Redirect(w, r, "/auth/sign-in", http.StatusSeeOther)
+			return
 		}
 
-		if _, ok := user.(*models.User); !ok {
-			return c.Redirect(http.StatusSeeOther, "/auth/sign-in")
-		}
+		next.ServeHTTP(w, r)
+	})
+}
 
-		return next(c)
+func GetUser(r *http.Request) *models.User {
+	user := r.Context().Value(contextKeyUser)
+	if user == nil {
+		return nil
 	}
+
+	if user, ok := user.(*models.User); ok {
+		return user
+	}
+
+	return nil
 }

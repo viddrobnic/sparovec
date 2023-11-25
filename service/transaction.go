@@ -37,33 +37,17 @@ func NewTransaction(transactionRepository TransactionRepository, tagRepository T
 	}
 }
 
-func (t *Transaction) SaveTransaction(ctx context.Context, form *models.SaveTransactionForm, walletId int, user *models.User) (*models.Transaction, error) {
-	hasPermission, err := t.walletRepository.HasPermission(ctx, walletId, user.Id)
+func (t *Transaction) Create(ctx context.Context, transaction *models.Transaction, user *models.User) error {
+	hasPermission, err := t.walletRepository.HasPermission(ctx, transaction.WalletId, user.Id)
 	if err != nil {
 		t.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
-		return nil, models.ErrInternalServer
+		return models.ErrInternalServer
 	}
 
 	if !hasPermission {
-		return nil, nil
+		return nil
 	}
 
-	transaction, err := form.Parse(walletId)
-	if err != nil {
-		return nil, err
-	}
-
-	switch form.SubmitType {
-	case models.TransactionFormSubmitTypeCreate:
-		return transaction, t.createTransaction(ctx, transaction)
-	case models.TransactionFormSubmitTypeEdit:
-		return transaction, t.updateTransaction(ctx, transaction)
-	default:
-		return nil, &models.ErrInvalidForm{Message: "Invalid submit type"}
-	}
-}
-
-func (t *Transaction) createTransaction(ctx context.Context, transaction *models.Transaction) error {
 	if err := t.validateTag(ctx, transaction.Tag, transaction.WalletId); err != nil {
 		return err
 	}
@@ -76,7 +60,17 @@ func (t *Transaction) createTransaction(ctx context.Context, transaction *models
 	return nil
 }
 
-func (t *Transaction) updateTransaction(ctx context.Context, transaction *models.Transaction) error {
+func (t *Transaction) Update(ctx context.Context, transaction *models.Transaction, user *models.User) error {
+	hasPermission, err := t.walletRepository.HasPermission(ctx, transaction.WalletId, user.Id)
+	if err != nil {
+		t.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
+		return models.ErrInternalServer
+	}
+
+	if !hasPermission {
+		return nil
+	}
+
 	if err := t.validateTag(ctx, transaction.Tag, transaction.WalletId); err != nil {
 		return err
 	}
