@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"math"
@@ -123,13 +124,27 @@ func (t *Transactions) transactions(w http.ResponseWriter, r *http.Request) {
 	// Calculate number of pages
 	pages := int(math.Ceil(float64(paginatedTransactions.Count) / float64(req.Page.PageSize)))
 
+	// Get previous and next page
+	var prevUrl, nextUrl string
+	query := r.URL.Query()
+	if form.Page > 1 {
+		query.Set("page", strconv.Itoa(form.Page-1))
+		prevUrl = fmt.Sprintf("/wallets/%d/transactions?%s", walletId, query.Encode())
+	}
+	if form.Page < pages {
+		query.Set("page", strconv.Itoa(form.Page+1))
+		nextUrl = fmt.Sprintf("/wallets/%d/transactions?%s", walletId, query.Encode())
+	}
+
 	ctx := &models.TransactionsContext{
-		Navbar:       navbarCtx,
-		Transactions: models.RenderTransactions(paginatedTransactions.Data),
-		Tags:         tags,
-		CurrentPage:  req.Page.Page,
-		PageSize:     req.Page.PageSize,
-		TotalPages:   pages,
+		Navbar:          navbarCtx,
+		Transactions:    models.RenderTransactions(paginatedTransactions.Data),
+		Tags:            tags,
+		CurrentPage:     req.Page.Page,
+		TotalPages:      pages,
+		UrlParams:       r.URL.RawQuery,
+		PreviousPageUrl: prevUrl,
+		NextPageUrl:     nextUrl,
 	}
 
 	err = t.transactionsTemplate.Execute(w, ctx)

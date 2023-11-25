@@ -25,7 +25,7 @@
 </div>
 
 <div class="overflow-x-auto mt-6 shadow-lg card bg-base-100 overflow-y-clip">
-  <div class="card-body">
+  <div class="card-body" id="transactions_table">
     <table class="table">
       <thead>
         <tr>
@@ -36,7 +36,7 @@
           <th></th>
         </tr>
       </thead>
-      <tbody id="transactions_table">
+      <tbody>
         {{range .Transactions}}
         <!---->
         {{template "transaction-row" .}}
@@ -50,6 +50,55 @@
         {{end}}
       </tbody>
     </table>
+    <div
+      class="flex flex-row items-center justify-end mt-2 text-sm font-medium space-x-6"
+    >
+      <div>Page {{.CurrentPage}} of {{.TotalPages}}</div>
+      <div class="join">
+        <a
+          role="button"
+          class="join-item btn"
+          href="{{.PreviousPageUrl}}"
+          {{if
+          not
+          .PreviousPageUrl}}disabled{{end}}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="w-5 h-5"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </a>
+        <a
+          role="button"
+          class="join-item btn"
+          href="{{.NextPageUrl}}"
+          {{if
+          not
+          .NextPageUrl}}disabled{{end}}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="w-5 h-5"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </a>
+      </div>
+    </div>
   </div>
 </div>
 

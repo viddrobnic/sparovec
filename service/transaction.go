@@ -9,6 +9,7 @@ import (
 
 type TransactionRepository interface {
 	Create(ctx context.Context, transaction *models.Transaction) error
+	Update(ctx context.Context, transaction *models.Transaction) error
 	List(ctx context.Context, req *models.TransactionsListRequest) ([]*models.Transaction, int, error)
 }
 
@@ -73,6 +74,11 @@ func (t *Transaction) Update(ctx context.Context, transaction *models.Transactio
 
 	if err := t.validateTag(ctx, transaction.Tag, transaction.WalletId); err != nil {
 		return err
+	}
+
+	if err := t.transactionRepository.Update(ctx, transaction); err != nil {
+		t.log.ErrorContext(ctx, "Failed to update transaction", "error", err)
+		return models.ErrInternalServer
 	}
 
 	return nil

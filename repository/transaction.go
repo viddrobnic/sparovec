@@ -82,6 +82,31 @@ func (t *Transaction) Create(ctx context.Context, transaction *models.Transactio
 	return nil
 }
 
+func (t *Transaction) Update(ctx context.Context, transaction *models.Transaction) error {
+	var tagId sql.NullInt32
+	if transaction.Tag != nil {
+		tagId = sql.NullInt32{
+			Int32: int32(transaction.Tag.Id),
+			Valid: true,
+		}
+	}
+
+	builder := sq.Update("transactions").
+		Set("name", transaction.Name).
+		Set("value", transaction.Value).
+		Set("tag_id", tagId).
+		Set("created_at", transaction.CreatedAt).
+		Where("id = ?", transaction.Id)
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = t.db.ExecContext(ctx, stmt, args...)
+	return err
+}
+
 func (t *Transaction) List(ctx context.Context, req *models.TransactionsListRequest) ([]*models.Transaction, int, error) {
 	builder := sq.Select("*").From("transactions").
 		Where("wallet_id = ? ", req.WalletId)
@@ -89,7 +114,7 @@ func (t *Transaction) List(ctx context.Context, req *models.TransactionsListRequ
 	countBuilder := sq.Select("COUNT(*)").FromSelect(builder, "transactions")
 
 	builder = builder.
-		OrderBy("created_at DESC", "value ASC", "id").
+		OrderBy("date(created_at) DESC", "value ASC", "name", "id").
 		Offset(uint64(req.Page.Offset())).
 		Limit(uint64(req.Page.Limit()))
 

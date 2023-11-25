@@ -37,7 +37,16 @@
         class="p-2 w-52 shadow dropdown-content z-[1] menu bg-base-100 rounded-box"
       >
         <li>
-          <button onclick="">
+          <button
+            onclick="show_update_dialog({
+            id: {{.Id}},
+            name: '{{.Name}}',
+            type: '{{.Type}}',
+            value: {{.FormValue}},
+            date: '{{.FormCreatedAt}}',
+            tag: {{.FormTagId}},
+          })"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"

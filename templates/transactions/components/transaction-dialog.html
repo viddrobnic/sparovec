@@ -5,7 +5,7 @@
     <form
       id="transaction_form"
       class="pt-4 space-y-4"
-      hx-post="/wallets/{{.Navbar.SelectedWalletId}}/transactions?page={{.CurrentPage}}&page_size={{.PageSize}}"
+      hx-post="/wallets/{{.Navbar.SelectedWalletId}}/transactions?{{.UrlParams}}"
       hx-swap="outerHTML"
       hx-target="#transactions_table"
       hx-select="#transactions_table"
