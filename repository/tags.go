@@ -90,3 +90,22 @@ func (t *Tags) Delete(ctx context.Context, tagId int) error {
 	_, err = t.db.ExecContext(ctx, stmt, args...)
 	return err
 }
+
+func (t *Tags) GetIds(ctx context.Context, ids []int) ([]*models.Tag, error) {
+	if len(ids) == 0 {
+		return []*models.Tag{}, nil
+	}
+
+	builder := sq.Select("*").
+		From("tags").
+		Where(sq.Eq{"id": ids})
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	tags := []*models.Tag{}
+	err = t.db.SelectContext(ctx, &tags, stmt, args...)
+	return tags, err
+}

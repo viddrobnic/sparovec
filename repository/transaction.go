@@ -81,3 +81,44 @@ func (t *Transaction) Create(ctx context.Context, transaction *models.Transactio
 	*transaction = *dbTransaction.ToModel()
 	return nil
 }
+
+func (t *Transaction) List(ctx context.Context, req *models.TransactionsListRequest) ([]*models.Transaction, int, error) {
+	builder := sq.Select("*").From("transactions").
+		Where("wallet_id = ? ", req.WalletId)
+
+	countBuilder := sq.Select("COUNT(*)").FromSelect(builder, "transactions")
+
+	builder = builder.
+		OrderBy("created_at DESC", "value ASC", "id").
+		Offset(uint64(req.Page.Offset())).
+		Limit(uint64(req.Page.Limit()))
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dbTransactions := []*dbTransaction{}
+	err = t.db.SelectContext(ctx, &dbTransactions, stmt, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	transactions := make([]*models.Transaction, len(dbTransactions))
+	for i, dbTransaction := range dbTransactions {
+		transactions[i] = dbTransaction.ToModel()
+	}
+
+	countStmt, countArgs, err := countBuilder.ToSql()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var count int
+	err = t.db.GetContext(ctx, &count, countStmt, countArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return transactions, count, nil
+}

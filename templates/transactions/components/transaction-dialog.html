@@ -5,7 +5,7 @@
     <form
       id="transaction_form"
       class="pt-4 space-y-4"
-      hx-post="/wallets/{{.Navbar.SelectedWalletId}}/transactions"
+      hx-post="/wallets/{{.Navbar.SelectedWalletId}}/transactions?page={{.CurrentPage}}&page_size={{.PageSize}}"
       hx-swap="outerHTML"
       hx-target="#transactions_table"
       hx-select="#transactions_table"
@@ -71,8 +71,9 @@
           class="w-full xs:flex-grow xs:w-auto select select-bordered"
         >
           <option selected value="">No Tag Selected</option>
-          <option value="1">asdf</option>
-          <option value="2">fdsa</option>
+          {{range .Tags}}
+          <option value="{{.Id}}">{{.Name}}</option>
+          {{end}}
         </select>
       </div>
 

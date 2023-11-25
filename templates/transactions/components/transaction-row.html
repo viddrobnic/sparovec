@@ -3,11 +3,13 @@
   <td>{{.Name}}</td>
   <td class="font-semibold whitespace-nowrap text-end">{{.Value}}</td>
   <td>
+    {{if .Tag}}
     <div
       class="inline-flex flex-nowrap items-center py-0.5 px-2.5 text-sm whitespace-nowrap rounded-lg border border-neutral-content bg-base-100"
     >
-      {{.TagName}}
+      {{.Name}}
     </div>
+    {{end}}
   </td>
   <td class="font-light text-gray-600 whitespace-nowrap whitespace">
     {{.CreatedAt}}
