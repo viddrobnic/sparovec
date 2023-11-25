@@ -41,7 +41,7 @@ func NewAuth(service AuthService, log *slog.Logger) *Auth {
 func (a *Auth) Mount(router chi.Router) {
 	group := chi.NewRouter()
 
-	router.Get("/sign-in", a.signIn)
+	group.Get("/sign-in", a.signIn)
 	group.Post("/sign-in", a.submitSignIn)
 	group.Get("/sign-out", a.signOut)
 

@@ -127,12 +127,13 @@ func (t *Transactions) transactions(w http.ResponseWriter, r *http.Request) {
 	// Get previous and next page
 	var prevUrl, nextUrl string
 	query := r.URL.Query()
-	if form.Page > 1 {
-		query.Set("page", strconv.Itoa(form.Page-1))
+	page := req.Page.Page
+	if page > 1 {
+		query.Set("page", strconv.Itoa(page-1))
 		prevUrl = fmt.Sprintf("/wallets/%d/transactions?%s", walletId, query.Encode())
 	}
-	if form.Page < pages {
-		query.Set("page", strconv.Itoa(form.Page+1))
+	if page < pages {
+		query.Set("page", strconv.Itoa(page+1))
 		nextUrl = fmt.Sprintf("/wallets/%d/transactions?%s", walletId, query.Encode())
 	}
 
