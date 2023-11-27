@@ -1,0 +1,44 @@
+name: Build Executable
+
+on:
+  push:
+    branches:
+      - "**"
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+          check-latest: true
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 21
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: true
+      - name: Generate static files
+        run: make build
+      - name: Build executable
+        run: GOOS=linux GOARCH=amd64 go build -o sparovec
+      - name: Upload executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: sparovec
+          path: sparovec
+          if-no-files-found: error # Fail if no files are found
+      - name: Add executable to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: sparovec
+
