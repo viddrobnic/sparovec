@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 
@@ -25,22 +26,20 @@ type Wallets struct {
 	walletCardTemplate *template.Template
 }
 
-func NewWallets(service WalletsService, log *slog.Logger) *Wallets {
-	walletsTemplate := template.Must(template.ParseFiles(
+func NewWallets(service WalletsService, templates fs.FS, log *slog.Logger) *Wallets {
+	walletsTemplate := template.Must(template.ParseFS(
+		templates,
 		"templates/index.html",
 		"templates/layout.html",
 		"templates/wallets/wallets.html",
+		"templates/wallets/components/*",
 	))
-	template.Must(walletsTemplate.ParseGlob("templates/wallets/components/*"))
-
-	walletCardTemplate := template.Must(template.ParseFiles("templates/wallets/components/wallet-card.html"))
 
 	return &Wallets{
 		service: service,
 		log:     log,
 
-		walletsTemplate:    walletsTemplate,
-		walletCardTemplate: walletCardTemplate,
+		walletsTemplate: walletsTemplate,
 	}
 }
 

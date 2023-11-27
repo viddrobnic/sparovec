@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"log"
 	"log/slog"
@@ -22,7 +23,24 @@ import (
 	"github.com/viddrobnic/sparovec/service"
 )
 
+//go:embed config.toml
+var defaultConfig []byte
+
+//go:embed migrations
+var migrationsDir embed.FS
+
+//go:embed templates
+var templatesDir embed.FS
+
+//go:embed assets
+var assetsDir embed.FS
+
 func main() {
+	err := config.WriteDefault(defaultConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	conf, err := config.LoadDefault()
 	if err != nil {
 		log.Fatal(err)
@@ -80,14 +98,37 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	tagsService := service.NewTags(tagsRepository, walletsRepository, logger)
 	transactionService := service.NewTransaction(transactionRepository, tagsRepository, walletsRepository, logger)
 
-	authRoutes := routes.NewAuth(authService, logger.With("where", "auth_router"))
-	walletsRoutes := routes.NewWallets(walletsRepository, logger)
-	dashboardRoutes := routes.NewDashboard(walletsRepository, logger)
-	tagsRoutes := routes.NewTags(walletsRepository, tagsService, logger)
-	transactionsRoutes := routes.NewTransactions(walletsRepository, transactionService, tagsService, logger)
+	authRoutes := routes.NewAuth(
+		authService,
+		templatesDir,
+		logger.With("where", "auth_routes"),
+	)
+	walletsRoutes := routes.NewWallets(
+		walletsRepository,
+		templatesDir,
+		logger.With("where", "wallets_routes"),
+	)
+	dashboardRoutes := routes.NewDashboard(
+		walletsRepository,
+		templatesDir,
+		logger.With("where", "dashboard_routes"),
+	)
+	tagsRoutes := routes.NewTags(
+		walletsRepository,
+		tagsService,
+		templatesDir,
+		logger.With("where", "tags_routes"),
+	)
+	transactionsRoutes := routes.NewTransactions(
+		walletsRepository,
+		transactionService,
+		tagsService,
+		templatesDir,
+		logger.With("where", "transactions_routes"),
+	)
 
 	router := createRouter(conf, authService)
-	router.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("assets"))))
+	router.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(assetsDir))))
 
 	authRoutes.Mount(router)
 	walletsRoutes.Mount(router)
@@ -111,7 +152,7 @@ func setupDatabase(conf *config.Config, logger *slog.Logger) (*sqlx.DB, error) {
 	}
 
 	logger.Info("Migrating database")
-	err = database.Migrate(db)
+	err = database.Migrate(db, migrationsDir)
 	if err != nil {
 		logger.Error("Failed to migrate database", "error", err)
 		return nil, err

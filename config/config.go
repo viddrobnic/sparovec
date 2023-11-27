@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"os"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -69,4 +71,22 @@ func Load(configFile string) (*Config, error) {
 	})
 
 	return conf, err
+}
+
+func WriteDefault(data []byte) error {
+	_, err := os.Stat(defaultConfigFile)
+	if err == nil {
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	f, err := os.Create(defaultConfigFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write(data)
+	return err
 }

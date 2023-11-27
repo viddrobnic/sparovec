@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 
@@ -24,8 +25,9 @@ type Auth struct {
 	signInTemplate *template.Template
 }
 
-func NewAuth(service AuthService, log *slog.Logger) *Auth {
-	signInTemplate := template.Must(template.ParseFiles(
+func NewAuth(service AuthService, templates fs.FS, log *slog.Logger) *Auth {
+	signInTemplate := template.Must(template.ParseFS(
+		templates,
 		"templates/index.html",
 		"templates/auth/sign-in.html",
 	))

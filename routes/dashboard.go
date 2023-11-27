@@ -2,6 +2,7 @@ package routes
 
 import (
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 
@@ -17,8 +18,9 @@ type Dashboard struct {
 	dashboardTemplate *template.Template
 }
 
-func NewDashboard(navbarService NavbarWalletsService, log *slog.Logger) *Dashboard {
-	dashboardTemplate := template.Must(template.ParseFiles(
+func NewDashboard(navbarService NavbarWalletsService, templates fs.FS, log *slog.Logger) *Dashboard {
+	dashboardTemplate := template.Must(template.ParseFS(
+		templates,
 		"templates/index.html",
 		"templates/layout.html",
 		"templates/dashboard/dashboard.html",

@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -31,14 +32,16 @@ type Tags struct {
 func NewTags(
 	navbarService NavbarWalletsService,
 	tagsService TagsService,
+	templates fs.FS,
 	log *slog.Logger,
 ) *Tags {
-	tagsTemplate := template.Must(template.ParseFiles(
+	tagsTemplate := template.Must(template.ParseFS(
+		templates,
 		"templates/index.html",
 		"templates/layout.html",
 		"templates/tags/tags.html",
+		"templates/tags/components/*",
 	))
-	template.Must(tagsTemplate.ParseGlob("templates/tags/components/*"))
 
 	return &Tags{
 		navbarService: navbarService,

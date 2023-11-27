@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"math"
 	"net/http"
@@ -43,14 +44,16 @@ func NewTransactions(
 	navbarService NavbarWalletsService,
 	transactionService TransactionService,
 	tagsService TransactionTagsService,
+	templates fs.FS,
 	log *slog.Logger,
 ) *Transactions {
-	transactionsTemplate := template.Must(template.ParseFiles(
+	transactionsTemplate := template.Must(template.ParseFS(
+		templates,
 		"templates/index.html",
 		"templates/layout.html",
 		"templates/transactions/transactions.html",
+		"templates/transactions/components/*",
 	))
-	template.Must(transactionsTemplate.ParseGlob("templates/transactions/components/*"))
 
 	return &Transactions{
 		navbarService:      navbarService,
