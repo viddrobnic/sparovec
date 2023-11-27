@@ -147,3 +147,15 @@ func (t *Transaction) List(ctx context.Context, req *models.TransactionsListRequ
 
 	return transactions, count, nil
 }
+
+func (t *Transaction) Delete(ctx context.Context, id int) error {
+	builder := sq.Delete("transactions").Where("id = ?", id)
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = t.db.ExecContext(ctx, stmt, args...)
+	return err
+}

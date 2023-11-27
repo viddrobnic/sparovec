@@ -22,6 +22,7 @@ type TransactionService interface {
 	Create(ctx context.Context, transaction *models.Transaction, user *models.User) error
 	Update(ctx context.Context, transaction *models.Transaction, user *models.User) error
 	List(ctx context.Context, req *models.TransactionsListRequest, user *models.User) (*models.PaginatedResponse[*models.Transaction], error)
+	Delete(ctx context.Context, id, walletId int, user *models.User) error
 }
 
 type TransactionTagsService interface {
@@ -67,6 +68,7 @@ func (t *Transactions) Mount(router chi.Router) {
 
 	group.Get("/", t.transactions)
 	group.Post("/", t.saveTransaction)
+	group.Post("/delete", t.deleteTransaction)
 
 	router.Mount("/wallets/{walletId}/transactions", group)
 }
@@ -266,6 +268,28 @@ func (t *Transactions) saveTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(HtmxHeaderTriggerAfterSettle, HtmxEventSaveSuccess)
+	t.transactions(w, r)
+}
+
+func (t *Transactions) deleteTransaction(w http.ResponseWriter, r *http.Request) {
+	user := auth.GetUser(r)
+	walletId := getWalletId(r)
+
+	id, err := strconv.Atoi(r.FormValue("id"))
+	if err != nil {
+		t.log.Error("Failed to parse transaction id", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = t.transactionService.Delete(r.Context(), id, walletId, user)
+	if err != nil {
+		t.log.Error("Failed to delete transaction", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(HtmxHeaderTriggerAfterSettle, HtmxEventDeleteSuccess)
 	t.transactions(w, r)
 }
 

@@ -11,6 +11,7 @@ type TransactionRepository interface {
 	Create(ctx context.Context, transaction *models.Transaction) error
 	Update(ctx context.Context, transaction *models.Transaction) error
 	List(ctx context.Context, req *models.TransactionsListRequest) ([]*models.Transaction, int, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type TransactionTagRepository interface {
@@ -134,6 +135,25 @@ func (t *Transaction) List(ctx context.Context, req *models.TransactionsListRequ
 		Count: count,
 		Data:  transactions,
 	}, nil
+}
+
+func (t *Transaction) Delete(ctx context.Context, id, walletId int, user *models.User) error {
+	hasPermission, err := t.walletRepository.HasPermission(ctx, walletId, user.Id)
+	if err != nil {
+		t.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
+		return models.ErrInternalServer
+	}
+
+	if !hasPermission {
+		return nil
+	}
+
+	if err := t.transactionRepository.Delete(ctx, id); err != nil {
+		t.log.ErrorContext(ctx, "Failed to delete transaction", "error", err)
+		return models.ErrInternalServer
+	}
+
+	return nil
 }
 
 func (t *Transaction) expandTags(ctx context.Context, transactions []*models.Transaction) error {

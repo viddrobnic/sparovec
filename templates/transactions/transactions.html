@@ -103,6 +103,8 @@
 </div>
 
 {{template "transaction-dialog" .}}
+<!---->
+{{template "transaction-delete-dialog" .}}
 
 <script>
   function show_create_dialog() {
@@ -143,6 +145,12 @@
     transaction_dialog.showModal();
   }
 
+  function show_delete_dialog(id, name) {
+    delete_transaction_form_id.value = id;
+    delete_transaction_warn_name.innerHTML = name;
+    delete_transaction_dialog.showModal();
+  }
+
   // Handle save errors
   document.body.addEventListener("saveError", function (evt) {
     transaction_alert_message.innerHTML = evt.detail.value;
@@ -152,6 +160,10 @@
   // Handle save success
   document.body.addEventListener("saveSuccess", function (evt) {
     transaction_dialog.close();
+  });
+
+  document.body.addEventListener("deleteSuccess", function (evt) {
+    delete_transaction_dialog.close();
   });
 </script>
 
