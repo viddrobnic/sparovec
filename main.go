@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
@@ -128,7 +129,8 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	)
 
 	router := createRouter(conf, authService)
-	router.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(assetsDir))))
+	staticFs, _ := fs.Sub(assetsDir, "assets")
+	router.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFs))))
 
 	authRoutes.Mount(router)
 	walletsRoutes.Mount(router)
