@@ -35,11 +35,17 @@ func NewWallets(service WalletsService, templates fs.FS, log *slog.Logger) *Wall
 		"templates/wallets/components/*",
 	))
 
+	walletCardTemplate := template.Must(template.ParseFS(
+		templates,
+		"templates/wallets/components/wallet-card.html",
+	))
+
 	return &Wallets{
 		service: service,
 		log:     log,
 
-		walletsTemplate: walletsTemplate,
+		walletsTemplate:    walletsTemplate,
+		walletCardTemplate: walletCardTemplate,
 	}
 }
 
