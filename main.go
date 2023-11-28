@@ -32,7 +32,7 @@ var migrationsDir embed.FS
 //go:embed templates
 var templatesDir embed.FS
 
-//go:embed assets
+//go:embed assets/*
 var assetsDir embed.FS
 
 func main() {
@@ -180,7 +180,13 @@ func createRouter(conf *config.Config, authService auth.Service) chi.Router {
 			},
 			AllowedHeaders: []string{"*"},
 		}),
-		middleware.Logger,
+	)
+
+	if conf.Observability.WriteToConsole {
+		router.Use(middleware.Logger)
+	}
+
+	router.Use(
 		middleware.Timeout(5*time.Second),
 		auth.CreateMiddleware(authService),
 		middleware.Recoverer,
