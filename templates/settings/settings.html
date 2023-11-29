@@ -1,0 +1,16 @@
+{{define "title"}}Šparovec | Settings{{end}}
+
+<!---->
+
+{{define "content"}}
+<div>
+  <h1 class="text-5xl font-semibold">Settings</h1>
+  <div class="card shadow-lg bg-base-100 mt-6">
+    <div class="grid sm:grid-cols-3 card-body">
+      {{template "name-settings" .}}
+      <div class="divider sm:col-span-3"></div>
+      {{template "member-settings" .}}
+    </div>
+  </div>
+</div>
+{{end}}

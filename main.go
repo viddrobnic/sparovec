@@ -127,6 +127,11 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 		templatesDir,
 		logger.With("where", "transactions_routes"),
 	)
+	settingsRoutes := routes.NewSettings(
+		walletsRepository,
+		templatesDir,
+		logger.With("where", "settings_routes"),
+	)
 
 	router := createRouter(conf, authService)
 	staticFs, _ := fs.Sub(assetsDir, "assets")
@@ -137,6 +142,7 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	dashboardRoutes.Mount(router)
 	tagsRoutes.Mount(router)
 	transactionsRoutes.Mount(router)
+	settingsRoutes.Mount(router)
 
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", conf.API.ListenAddress, conf.API.Port), router)
 	if err != nil {
