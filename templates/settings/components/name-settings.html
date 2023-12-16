@@ -29,7 +29,12 @@
     <p class="mt-1 text-sm">Edit general wallet information.</p>
 </div>
 <div class="sm:col-span-2">
-    <form>
+    <form id="update_wallet_name_form"
+          hx-post="/wallets/{{.Navbar.SelectedWalletId}}/settings/name"
+          hx-swap="outerHTML"
+          hx-target="#update_wallet_name_form"
+          hx-select="#update_wallet_name_form"
+          hx-disabled-elt="#update_wallet_name_button">
         <label class="w-full form-control">
             <div class="label">
                 <span class="label-text">Name</span>
@@ -40,7 +45,10 @@
                        name="name"
                        value="{{ .WalletName }}"
                        class="w-full input input-bordered" />
-                <button class="btn btn-primary">Save</button>
+                <button type="submit" class="btn btn-primary" id="update_wallet_name_button">
+                    <span class="loading loading-spinner loading-xs loading-indicator"></span>
+                    Save
+                </button>
             </div>
         </label>
     </form>

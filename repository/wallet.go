@@ -34,6 +34,66 @@ func (w *Wallets) ForUser(ctx context.Context, userId int) ([]*models.Wallet, er
 	return wallets, err
 }
 
+func (w *Wallets) ForId(ctx context.Context, walletId int) (*models.Wallet, error) {
+	builder := sq.Select("*").From("wallets").Where("id = ?", walletId)
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	wallet := &models.Wallet{}
+	err = w.db.GetContext(ctx, wallet, stmt, args...)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	return wallet, err
+}
+
+func (w *Wallets) SetName(ctx context.Context, walletId int, name string) error {
+	builder := sq.Update("wallets").Set("name", name).Where("id = ?", walletId)
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.db.ExecContext(ctx, stmt, args...)
+	return err
+}
+
+func (w *Wallets) Members(ctx context.Context, walletId int) ([]*models.Member, error) {
+	builder := sq.Select("u.id", "u.username").
+		From("users u").
+		InnerJoin("wallet_users wu ON u.id = wu.user_id").
+		Where("wu.wallet_id = ?", walletId).
+		OrderBy("u.username")
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	members := []*models.Member{}
+	err = w.db.SelectContext(ctx, &members, stmt, args...)
+	return members, err
+}
+
+func (w *Wallets) AddMember(ctx context.Context, walletId, userId int) error {
+	builder := sq.Insert("wallet_users").
+		Columns("wallet_id", "user_id").
+		Values(walletId, userId)
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.db.ExecContext(ctx, stmt, args...)
+	return err
+}
+
 func (w *Wallets) HasPermission(ctx context.Context, walletId, userId int) (bool, error) {
 	builder := sq.Select("1").
 		From("wallet_users").

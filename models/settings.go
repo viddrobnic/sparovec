@@ -10,5 +10,5 @@ type SettingsContext struct {
 	Navbar *NavbarContext
 
 	WalletName string
-	Members    []Member
+	Members    []*Member
 }

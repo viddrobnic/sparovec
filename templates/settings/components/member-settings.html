@@ -18,7 +18,7 @@
     </div>
     <p class="mt-1 text-sm">Add and remove members from this wallet.</p>
 </div>
-<div class="sm:col-span-2">
+<div class="sm:col-span-2" id="add_members">
     <table class="table">
         <tbody>
             {{ range .Members }}
@@ -54,11 +54,20 @@
             {{ end }}
         </tbody>
     </table>
-    <div class="flex flex-row mt-4 space-x-4">
+    <form class="flex flex-row mt-4 space-x-4"
+          hx-post="/wallets/{{.Navbar.SelectedWalletId}}/settings/add-member"
+          hx-swap="outerHTML"
+          hx-target="#add_members"
+          hx-select="#add_members"
+          hx-disabled-elt="#add_member_button">
         <input type="text"
+               name="username"
                class="w-full input input-bordered"
                placeholder="Add member">
-        <button class="btn btn-primary">Add</button>
-    </div>
+        <button class="btn btn-primary" id="add_member_button">
+            <span class="loading loading-spinner loading-xs loading-indicator"></span>
+            Add
+        </button>
+    </form>
 </div>
 {{ end }}

@@ -98,6 +98,7 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	authService := service.NewAuth(usersRepository, conf, logger)
 	tagsService := service.NewTags(tagsRepository, walletsRepository, logger)
 	transactionService := service.NewTransaction(transactionRepository, tagsRepository, walletsRepository, logger)
+	settingsService := service.NewSettings(walletsRepository, usersRepository, logger)
 
 	authRoutes := routes.NewAuth(
 		authService,
@@ -129,7 +130,7 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	)
 	settingsRoutes := routes.NewSettings(
 		walletsRepository,
-		nil,
+		settingsService,
 		templatesDir,
 		logger.With("where", "settings_routes"),
 	)
