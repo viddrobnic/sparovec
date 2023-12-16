@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"html/template"
 	"io/fs"
 	"log/slog"
@@ -8,17 +9,29 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/viddrobnic/sparovec/middleware/auth"
+	"github.com/viddrobnic/sparovec/models"
 )
 
+type SettingsService interface {
+	WalletName(ctx context.Context, walletId int, user *models.User) (string, error)
+	Members(ctx context.Context, walletId int, user *models.User) ([]*models.Member, error)
+}
+
 type Settings struct {
-	navbarService NavbarWalletsService
-	log           *slog.Logger
+	navbarService   NavbarWalletsService
+	settingsService SettingsService
+	log             *slog.Logger
 
 	// Templates
 	settingsTemplate *template.Template
 }
 
-func NewSettings(navbarService NavbarWalletsService, templates fs.FS, log *slog.Logger) *Settings {
+func NewSettings(
+	navbarService NavbarWalletsService,
+	settingsService SettingsService,
+	templates fs.FS,
+	log *slog.Logger,
+) *Settings {
 	settingsTemplate := template.Must(template.ParseFS(
 		templates,
 		"templates/index.html",
@@ -28,8 +41,9 @@ func NewSettings(navbarService NavbarWalletsService, templates fs.FS, log *slog.
 	))
 
 	return &Settings{
-		navbarService: navbarService,
-		log:           log,
+		navbarService:   navbarService,
+		settingsService: settingsService,
+		log:             log,
 
 		settingsTemplate: settingsTemplate,
 	}
@@ -52,7 +66,16 @@ func (s *Settings) settings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.settingsTemplate.Execute(w, map[string]any{"Navbar": navbarCtx})
+	ctx := &models.SettingsContext{
+		Navbar:     navbarCtx,
+		WalletName: "My Wallet",
+		Members: []models.Member{
+			{Id: 1, Username: "John", IsSelf: true},
+			{Id: 2, Username: "Jane"},
+		},
+	}
+
+	err = s.settingsTemplate.Execute(w, ctx)
 	if err != nil {
 		s.log.Error("Failed to execute template", "error", err)
 	}

@@ -129,6 +129,7 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	)
 	settingsRoutes := routes.NewSettings(
 		walletsRepository,
+		nil,
 		templatesDir,
 		logger.With("where", "settings_routes"),
 	)

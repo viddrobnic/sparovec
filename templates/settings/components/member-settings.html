@@ -1,18 +1,64 @@
-{{define "member-settings"}}
+{{ define "member-settings" }}
 <div class="sm:col-span-1">
-  <div class="flex flex-row items-center">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round" class="mr-2 h-6 w-6">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-    <h2 class="text-xl font-medium">Members</h2>
-  </div>
-  <p class="text-sm mt-1">Add and remove members from this wallet.</p>
+    <div class="flex flex-row items-center">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             stroke-width="2"
+             stroke-linecap="round"
+             stroke-linejoin="round"
+             class="mr-2 w-6 h-6">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+        <h2 class="text-xl font-medium">Members</h2>
+    </div>
+    <p class="mt-1 text-sm">Add and remove members from this wallet.</p>
 </div>
-<div class="sm:col-span-2 ">
-  Members
+<div class="sm:col-span-2">
+    <table class="table">
+        <tbody>
+            {{ range .Members }}
+            <tr class="{{ if not .IsSelf }}hover{{ end }}">
+                <td class="text-lg">
+                    {{.Username}}
+                    {{ if .IsSelf }}
+                    <span class="ml-2 badge badge-md badge-accent">You</span>
+                    {{ end }}
+                </td>
+                <td class="text-end">
+                    {{ if not .IsSelf }}
+                    <button class="btn btn-sm btn-outline btn-error">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             viewBox="0 0 24 24"
+                             fill="none"
+                             stroke="currentColor"
+                             stroke-width="2"
+                             stroke-linecap="round"
+                             stroke-linejoin="round"
+                             class="w-5 h-5">
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            <line x1="10" x2="10" y1="11" y2="17" />
+                            <line x1="14" x2="14" y1="11" y2="17" />
+                        </svg>
+                        Remove
+                    </button>
+                    {{ end }}
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    <div class="flex flex-row mt-4 space-x-4">
+        <input type="text"
+               class="w-full input input-bordered"
+               placeholder="Add member">
+        <button class="btn btn-primary">Add</button>
+    </div>
 </div>
-{{end}}
+{{ end }}
