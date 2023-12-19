@@ -13,6 +13,8 @@ type SettingsWalletRepository interface {
 	Members(ctx context.Context, walletId int) ([]*models.Member, error)
 	SetName(ctx context.Context, walletId int, name string) error
 	AddMember(ctx context.Context, walletId, userId int) error
+	RemoveMember(ctx context.Context, walletId int, userId string) error
+	Delete(ctx context.Context, walletId int) error
 }
 
 type SettingsUserRepository interface {
@@ -129,4 +131,32 @@ func (s *Settings) AddMember(ctx context.Context, walletId int, username string,
 	}
 
 	return s.walletRepository.AddMember(ctx, walletId, creds.Id)
+}
+
+func (s *Settings) RemoveMember(ctx context.Context, walletId int, id string, user *models.User) error {
+	hasPermission, err := s.walletRepository.HasPermission(ctx, walletId, user.Id)
+	if err != nil {
+		s.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
+		return models.ErrInternalServer
+	}
+
+	if !hasPermission {
+		return nil
+	}
+
+	return s.walletRepository.RemoveMember(ctx, walletId, id)
+}
+
+func (s *Settings) DeleteWallet(ctx context.Context, walletId int, user *models.User) error {
+	hasPermission, err := s.walletRepository.HasPermission(ctx, walletId, user.Id)
+	if err != nil {
+		s.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
+		return models.ErrInternalServer
+	}
+
+	if !hasPermission {
+		return nil
+	}
+
+	return s.walletRepository.Delete(ctx, walletId)
 }

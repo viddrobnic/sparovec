@@ -94,6 +94,22 @@ func (w *Wallets) AddMember(ctx context.Context, walletId, userId int) error {
 	return err
 }
 
+func (w *Wallets) RemoveMember(ctx context.Context, walletId int, userId string) error {
+	builder := sq.Delete("wallet_users").
+		Where(sq.Eq{
+			"wallet_id": walletId,
+			"user_id":   userId,
+		})
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.db.ExecContext(ctx, stmt, args...)
+	return err
+}
+
 func (w *Wallets) HasPermission(ctx context.Context, walletId, userId int) (bool, error) {
 	builder := sq.Select("1").
 		From("wallet_users").
@@ -156,4 +172,16 @@ func (w *Wallets) Create(ctx context.Context, userId int, name string) (*models.
 
 	err = tx.Commit()
 	return wallet, err
+}
+
+func (w *Wallets) Delete(ctx context.Context, walletId int) error {
+	builder := sq.Delete("wallets").Where("id = ?", walletId)
+
+	stmt, args, err := builder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.db.ExecContext(ctx, stmt, args...)
+	return err
 }

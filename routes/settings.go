@@ -17,6 +17,8 @@ type SettingsService interface {
 	Members(ctx context.Context, walletId int, user *models.User) ([]*models.Member, error)
 	ChangeWalletName(ctx context.Context, walletId int, name string, user *models.User) error
 	AddMember(ctx context.Context, walletId int, username string, user *models.User) error
+	RemoveMember(ctx context.Context, walletId int, id string, user *models.User) error
+	DeleteWallet(ctx context.Context, walletId int, user *models.User) error
 }
 
 type Settings struct {
@@ -58,6 +60,8 @@ func (s *Settings) Mount(router chi.Router) {
 	group.Get("/", s.settings)
 	group.Post("/name", s.saveName)
 	group.Post("/add-member", s.addMember)
+	group.Post("/remove-member", s.removeMember)
+	group.Post("/delete", s.deleteWallet)
 
 	router.Mount("/wallets/{walletId}/settings", group)
 }
@@ -127,4 +131,33 @@ func (s *Settings) addMember(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.settings(w, r)
+}
+
+func (s *Settings) removeMember(w http.ResponseWriter, r *http.Request) {
+	walletId := getWalletId(r)
+	user := auth.GetUser(r)
+	id := r.FormValue("id")
+
+	err := s.settingsService.RemoveMember(r.Context(), walletId, id, user)
+	if err != nil {
+		s.log.Error("Failed to remove user", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	s.settings(w, r)
+}
+
+func (s *Settings) deleteWallet(w http.ResponseWriter, r *http.Request) {
+	walletId := getWalletId(r)
+	user := auth.GetUser(r)
+
+	err := s.settingsService.DeleteWallet(r.Context(), walletId, user)
+	if err != nil {
+		s.log.Error("Failed to delete wallet", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
