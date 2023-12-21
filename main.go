@@ -17,6 +17,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/database"
+	"github.com/viddrobnic/sparovec/features/wallets"
 	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/observability"
 	"github.com/viddrobnic/sparovec/repository"
@@ -91,7 +92,7 @@ func createUser(db *sqlx.DB, logger *slog.Logger, username, password string) {
 
 func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	usersRepository := repository.NewUsers(db)
-	walletsRepository := repository.NewWallets(db)
+	walletsRepository := wallets.NewRepository(db)
 	tagsRepository := repository.NewTags(db)
 	transactionRepository := repository.NewTransaction(db)
 
@@ -105,9 +106,8 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 		templatesDir,
 		logger.With("where", "auth_routes"),
 	)
-	walletsRoutes := routes.NewWallets(
+	walletsRoutes := wallets.New(
 		walletsRepository,
-		templatesDir,
 		logger.With("where", "wallets_routes"),
 	)
 	dashboardRoutes := routes.NewDashboard(

@@ -4,6 +4,7 @@ go 1.21.0
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
+	github.com/a-h/templ v0.2.476
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-chi/cors v1.2.1
 	github.com/golang-migrate/migrate/v4 v4.16.2

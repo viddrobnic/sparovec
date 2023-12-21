@@ -1,4 +1,4 @@
-package repository
+package wallets
 
 import (
 	"context"
@@ -9,15 +9,15 @@ import (
 	"github.com/viddrobnic/sparovec/models"
 )
 
-type Wallets struct {
+type Repository struct {
 	db *sqlx.DB
 }
 
-func NewWallets(db *sqlx.DB) *Wallets {
-	return &Wallets{db: db}
+func NewRepository(db *sqlx.DB) *Repository {
+	return &Repository{db: db}
 }
 
-func (w *Wallets) ForUser(ctx context.Context, userId int) ([]*models.Wallet, error) {
+func (w *Repository) ForUser(ctx context.Context, userId int) ([]*models.Wallet, error) {
 	builder := sq.Select("w.*").
 		From("wallets w").
 		Join("wallet_users wu ON w.id = wu.wallet_id").
@@ -34,7 +34,7 @@ func (w *Wallets) ForUser(ctx context.Context, userId int) ([]*models.Wallet, er
 	return wallets, err
 }
 
-func (w *Wallets) ForId(ctx context.Context, walletId int) (*models.Wallet, error) {
+func (w *Repository) ForId(ctx context.Context, walletId int) (*models.Wallet, error) {
 	builder := sq.Select("*").From("wallets").Where("id = ?", walletId)
 
 	stmt, args, err := builder.ToSql()
@@ -51,7 +51,7 @@ func (w *Wallets) ForId(ctx context.Context, walletId int) (*models.Wallet, erro
 	return wallet, err
 }
 
-func (w *Wallets) SetName(ctx context.Context, walletId int, name string) error {
+func (w *Repository) SetName(ctx context.Context, walletId int, name string) error {
 	builder := sq.Update("wallets").Set("name", name).Where("id = ?", walletId)
 
 	stmt, args, err := builder.ToSql()
@@ -63,7 +63,7 @@ func (w *Wallets) SetName(ctx context.Context, walletId int, name string) error 
 	return err
 }
 
-func (w *Wallets) Members(ctx context.Context, walletId int) ([]*models.Member, error) {
+func (w *Repository) Members(ctx context.Context, walletId int) ([]*models.Member, error) {
 	builder := sq.Select("u.id", "u.username").
 		From("users u").
 		InnerJoin("wallet_users wu ON u.id = wu.user_id").
@@ -80,7 +80,7 @@ func (w *Wallets) Members(ctx context.Context, walletId int) ([]*models.Member, 
 	return members, err
 }
 
-func (w *Wallets) AddMember(ctx context.Context, walletId, userId int) error {
+func (w *Repository) AddMember(ctx context.Context, walletId, userId int) error {
 	builder := sq.Insert("wallet_users").
 		Columns("wallet_id", "user_id").
 		Values(walletId, userId)
@@ -94,7 +94,7 @@ func (w *Wallets) AddMember(ctx context.Context, walletId, userId int) error {
 	return err
 }
 
-func (w *Wallets) RemoveMember(ctx context.Context, walletId int, userId string) error {
+func (w *Repository) RemoveMember(ctx context.Context, walletId int, userId string) error {
 	builder := sq.Delete("wallet_users").
 		Where(sq.Eq{
 			"wallet_id": walletId,
@@ -110,7 +110,7 @@ func (w *Wallets) RemoveMember(ctx context.Context, walletId int, userId string)
 	return err
 }
 
-func (w *Wallets) HasPermission(ctx context.Context, walletId, userId int) (bool, error) {
+func (w *Repository) HasPermission(ctx context.Context, walletId, userId int) (bool, error) {
 	builder := sq.Select("1").
 		From("wallet_users").
 		Where(sq.Eq{
@@ -134,7 +134,7 @@ func (w *Wallets) HasPermission(ctx context.Context, walletId, userId int) (bool
 	return exists, nil
 }
 
-func (w *Wallets) Create(ctx context.Context, userId int, name string) (*models.Wallet, error) {
+func (w *Repository) Create(ctx context.Context, userId int, name string) (*models.Wallet, error) {
 	tx, err := w.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (w *Wallets) Create(ctx context.Context, userId int, name string) (*models.
 	return wallet, err
 }
 
-func (w *Wallets) Delete(ctx context.Context, walletId int) error {
+func (w *Repository) Delete(ctx context.Context, walletId int) error {
 	builder := sq.Delete("wallets").Where("id = ?", walletId)
 
 	stmt, args, err := builder.ToSql()

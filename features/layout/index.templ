@@ -1,0 +1,142 @@
+package layout
+
+import (
+	"github.com/viddrobnic/sparovec/models"
+	"fmt"
+	"strconv"
+)
+
+templ Index(title string) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>{ title }</title>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<link href="/static/global.css" rel="stylesheet"/>
+			<script src="https://unpkg.com/htmx.org@1.9.8"></script>
+		</head>
+		<body data-theme="cupcake" class="min-h-screen bg-base-200">
+			{ children... }
+		</body>
+	</html>
+}
+
+templ navlist(selectedWalletId int) {
+	<li><a href={ templ.SafeURL(fmt.Sprintf("/wallets/%d", selectedWalletId)) }>Dashboard</a></li>
+	<li>
+		<a href={ templ.SafeURL(fmt.Sprintf("/wallets/%d/transactions", selectedWalletId)) }>Transactions</a>
+	</li>
+	<li><a href={ templ.SafeURL(fmt.Sprintf("/wallets/%d/tags", selectedWalletId)) }>Tags</a></li>
+	<li><a href={ templ.SafeURL(fmt.Sprintf("/wallets/%d/settings", selectedWalletId)) }>Settings</a></li>
+}
+
+templ Layout(navbar models.Navbar) {
+	<script>
+		function changeWallet() {
+			const id = document.getElementById("wallets-select").value;
+			window.location.assign("/wallets/" + id);
+		}
+	</script>
+	@Index(navbar.Title) {
+		<div class="justify-between shadow navbar bg-base-100">
+			<div class="justify-start">
+				if navbar.SelectedWalletId > 0 {
+					<div class="dropdown">
+						<label tabindex="0" class="md:hidden btn btn-ghost">
+							<svg
+ 								xmlns="http://www.w3.org/2000/svg"
+ 								class="w-5 h-5"
+ 								fill="none"
+ 								viewBox="0 0 24 24"
+ 								stroke="currentColor"
+							>
+								<path
+ 									stroke-linecap="round"
+ 									stroke-linejoin="round"
+ 									stroke-width="2"
+ 									d="M4 6h16M4 12h8m-8 6h16"
+								></path>
+							</svg>
+						</label>
+						<ul
+ 							tabindex="0"
+ 							class="p-2 mt-3 w-52 shadow menu menu-md dropdown-content z-[1] bg-base-100 rounded-box"
+						>
+							@navlist(navbar.SelectedWalletId)
+						</ul>
+					</div>
+				}
+				<a class="text-xl btn btn-ghost" href="/">Šparovec</a>
+			</div>
+			if navbar.SelectedWalletId > 0 {
+				<div class="hidden md:flex shrink-0">
+					<ul class="px-1 menu menu-horizontal">
+						@navlist(navbar.SelectedWalletId)
+					</ul>
+				</div>
+			}
+			<div class="flex-grow justify-end space-x-2 md:flex-grow-0">
+				<select
+ 					id="wallets-select"
+ 					class="w-full select select-bordered overflow-ellipsis md:w-[200px]"
+ 					onchange="changeWallet()"
+ 					if len(navbar.Wallets) == 0 {
+						disabled
+					}
+				>
+					<option
+ 						disabled
+ 						if navbar.SelectedWalletId == 0 {
+							selected
+						}
+					>
+						if len(navbar.Wallets) > 0 {
+							{ "Select a wallet" }
+						} else {
+							{ "No wallets" }
+						}
+					</option>
+					for _, wallet := range navbar.Wallets {
+						<option
+ 							value={ strconv.Itoa(wallet.Id) }
+ 							if wallet.Id == navbar.SelectedWalletId {
+								selected
+							}
+						>{ wallet.Name }</option>
+					}
+				</select>
+				<div class="dropdown dropdown-end">
+					<label tabindex="0" class="btn btn-ghost btn-circle avatar">
+						<svg
+ 							xmlns="http://www.w3.org/2000/svg"
+ 							width="24"
+ 							height="24"
+ 							viewBox="0 0 24 24"
+ 							fill="none"
+ 							stroke="currentColor"
+ 							stroke-width="2"
+ 							stroke-linecap="round"
+ 							stroke-linejoin="round"
+ 							class="lucide lucide-user-circle-2"
+						>
+							<path d="M18 20a6 6 0 0 0-12 0"></path>
+							<circle cx="12" cy="10" r="4"></circle>
+							<circle cx="12" cy="12" r="10"></circle>
+						</svg>
+					</label>
+					<ul
+ 						tabindex="0"
+ 						class="p-2 mt-3 w-52 shadow z-[1] menu menu-sm dropdown-content bg-base-100 rounded-box"
+					>
+						<li class="font-normal menu-title">{ navbar.Username }</li>
+						<li><a href="/auth/sign-out">Logout</a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="px-6 pt-8 pb-6 mx-auto w-full max-w-5xl">
+			{ children... }
+		</div>
+	}
+}
