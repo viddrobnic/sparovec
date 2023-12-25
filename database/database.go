@@ -14,7 +14,8 @@ import (
 )
 
 func New(conf *config.Config) (*sqlx.DB, error) {
-	return sqlx.Open("sqlite3", conf.Database.Location)
+	dbUrl := fmt.Sprintf("file:%s?_foreign_keys=on", conf.Database.Location)
+	return sqlx.Open("sqlite3", dbUrl)
 }
 
 func Migrate(db *sqlx.DB, migrations fs.FS) error {
