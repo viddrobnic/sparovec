@@ -1,4 +1,4 @@
-package repository
+package tags
 
 import (
 	"context"
@@ -8,15 +8,15 @@ import (
 	"github.com/viddrobnic/sparovec/models"
 )
 
-type Tags struct {
+type RepositoryImpl struct {
 	db *sqlx.DB
 }
 
-func NewTags(db *sqlx.DB) *Tags {
-	return &Tags{db: db}
+func NewRepository(db *sqlx.DB) *RepositoryImpl {
+	return &RepositoryImpl{db: db}
 }
 
-func (t *Tags) List(ctx context.Context, walletId int) ([]*models.Tag, error) {
+func (t *RepositoryImpl) List(ctx context.Context, walletId int) ([]*models.Tag, error) {
 	builder := sq.Select("*").
 		From("tags").
 		Where("wallet_id = ?", walletId).
@@ -32,7 +32,7 @@ func (t *Tags) List(ctx context.Context, walletId int) ([]*models.Tag, error) {
 	return tags, err
 }
 
-func (t *Tags) Create(ctx context.Context, walletId int, name string) (*models.Tag, error) {
+func (t *RepositoryImpl) Create(ctx context.Context, walletId int, name string) (*models.Tag, error) {
 	builder := sq.Insert("tags").
 		Columns("wallet_id", "name").
 		Values(walletId, name).
@@ -48,7 +48,7 @@ func (t *Tags) Create(ctx context.Context, walletId int, name string) (*models.T
 	return tag, err
 }
 
-func (t *Tags) Get(ctx context.Context, tagId int) (*models.Tag, error) {
+func (t *RepositoryImpl) Get(ctx context.Context, tagId int) (*models.Tag, error) {
 	builder := sq.Select("*").
 		From("tags").
 		Where("id = ?", tagId)
@@ -63,7 +63,7 @@ func (t *Tags) Get(ctx context.Context, tagId int) (*models.Tag, error) {
 	return tag, err
 }
 
-func (t *Tags) Update(ctx context.Context, tagId int, name string) (*models.Tag, error) {
+func (t *RepositoryImpl) Update(ctx context.Context, tagId int, name string) (*models.Tag, error) {
 	builder := sq.Update("tags").
 		Set("name", name).
 		Where("id = ?", tagId).
@@ -79,7 +79,7 @@ func (t *Tags) Update(ctx context.Context, tagId int, name string) (*models.Tag,
 	return tag, err
 }
 
-func (t *Tags) Delete(ctx context.Context, tagId int) error {
+func (t *RepositoryImpl) Delete(ctx context.Context, tagId int) error {
 	builder := sq.Delete("tags").Where("id = ?", tagId)
 
 	stmt, args, err := builder.ToSql()
@@ -91,7 +91,7 @@ func (t *Tags) Delete(ctx context.Context, tagId int) error {
 	return err
 }
 
-func (t *Tags) GetIds(ctx context.Context, ids []int) ([]*models.Tag, error) {
+func (t *RepositoryImpl) GetIds(ctx context.Context, ids []int) ([]*models.Tag, error) {
 	if len(ids) == 0 {
 		return []*models.Tag{}, nil
 	}

@@ -4,11 +4,13 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/viddrobnic/sparovec/features"
 	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/models"
+	"github.com/viddrobnic/sparovec/routes"
 )
 
 type WalletRepository interface {
@@ -48,9 +50,9 @@ func (t *Tags) Mount(router chi.Router) {
 	group.Use(auth.RequiredMiddleware)
 
 	group.Get("/", t.tags)
-	// group.Post("/", t.createTag)
-	// group.Put("/", t.updateTag)
-	// group.Post("/delete", t.deleteTag)
+	group.Post("/", t.createTag)
+	group.Put("/", t.updateTag)
+	group.Post("/delete", t.deleteTag)
 
 	router.Mount("/wallets/{walletId}/tags", group)
 }
@@ -67,6 +69,22 @@ func (t *Tags) listTags(ctx context.Context, walletId int, user *models.User) ([
 	}
 
 	return t.repository.List(ctx, walletId)
+}
+
+func (t *Tags) hasPermission(ctx context.Context, w http.ResponseWriter, walletId, userId int) bool {
+	hasPermission, err := t.walletRepository.HasPermission(ctx, walletId, userId)
+	if err != nil {
+		t.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return false
+	}
+
+	if !hasPermission {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return false
+	}
+
+	return true
 }
 
 func (t *Tags) tags(w http.ResponseWriter, r *http.Request) {
@@ -93,4 +111,82 @@ func (t *Tags) tags(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		t.log.Error("Failed to render view", "error", err)
 	}
+}
+
+func (t *Tags) createTag(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user := auth.GetUser(r)
+	walletId := features.GetWalletId(r)
+
+	if hasPermission := t.hasPermission(ctx, w, walletId, user.Id); !hasPermission {
+		return
+	}
+
+	name := r.FormValue("name")
+	_, err := t.repository.Create(ctx, walletId, name)
+	if err != nil {
+		t.log.Error("Failed to create tag", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, routes.HtmxEventCreateSuccess)
+	t.tags(w, r)
+}
+
+func (t *Tags) updateTag(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user := auth.GetUser(r)
+	walletId := features.GetWalletId(r)
+
+	if hasPermission := t.hasPermission(ctx, w, walletId, user.Id); !hasPermission {
+		return
+	}
+
+	idStr := r.FormValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		t.log.Error("Failed to parse tag id", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	name := r.FormValue("name")
+
+	_, err = t.repository.Update(ctx, id, name)
+	if err != nil {
+		t.log.Error("Failed to update tag", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, routes.HtmxEventUpdateSuccess)
+	t.tags(w, r)
+}
+
+func (t *Tags) deleteTag(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user := auth.GetUser(r)
+	walletId := features.GetWalletId(r)
+
+	if hasPermission := t.hasPermission(ctx, w, walletId, user.Id); !hasPermission {
+		return
+	}
+
+	idStr := r.FormValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		t.log.Error("Failed to parse tag id", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = t.repository.Delete(ctx, id)
+	if err != nil {
+		t.log.Error("Failed to delete tag", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, routes.HtmxEventDeleteSuccess)
+	t.tags(w, r)
 }

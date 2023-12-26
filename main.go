@@ -94,7 +94,7 @@ func createUser(db *sqlx.DB, logger *slog.Logger, username, password string) {
 func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	usersRepository := repository.NewUsers(db)
 	walletsRepository := wallets.NewRepository(db)
-	tagsRepository := repository.NewTags(db)
+	tagsRepository := tags.NewRepository(db)
 	transactionRepository := repository.NewTransaction(db)
 
 	authService := service.NewAuth(usersRepository, conf, logger)
