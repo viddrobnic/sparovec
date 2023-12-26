@@ -1,0 +1,96 @@
+package tags
+
+import (
+	"context"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/viddrobnic/sparovec/features"
+	"github.com/viddrobnic/sparovec/middleware/auth"
+	"github.com/viddrobnic/sparovec/models"
+)
+
+type WalletRepository interface {
+	HasPermission(ctx context.Context, walletId, userId int) (bool, error)
+}
+
+type Repository interface {
+	List(ctx context.Context, walletId int) ([]*models.Tag, error)
+	Create(ctx context.Context, walletId int, name string) (*models.Tag, error)
+	Get(ctx context.Context, tagId int) (*models.Tag, error)
+	Update(ctx context.Context, tagId int, name string) (*models.Tag, error)
+	Delete(ctx context.Context, tagId int) error
+}
+
+type Tags struct {
+	walletRepository WalletRepository
+	repository       Repository
+
+	log *slog.Logger
+}
+
+func New(
+	walletRepository WalletRepository,
+	repository Repository,
+	log *slog.Logger,
+) *Tags {
+	return &Tags{
+		walletRepository: walletRepository,
+		repository:       repository,
+
+		log: log,
+	}
+}
+
+func (t *Tags) Mount(router chi.Router) {
+	group := chi.NewRouter()
+	group.Use(auth.RequiredMiddleware)
+
+	group.Get("/", t.tags)
+	// group.Post("/", t.createTag)
+	// group.Put("/", t.updateTag)
+	// group.Post("/delete", t.deleteTag)
+
+	router.Mount("/wallets/{walletId}/tags", group)
+}
+
+func (t *Tags) listTags(ctx context.Context, walletId int, user *models.User) ([]*models.Tag, error) {
+	hasPermission, err := t.walletRepository.HasPermission(ctx, walletId, user.Id)
+	if err != nil {
+		t.log.ErrorContext(ctx, "Failed to get wallet permission", "error", err)
+		return nil, models.ErrInternalServer
+	}
+
+	if !hasPermission {
+		return []*models.Tag{}, nil
+	}
+
+	return t.repository.List(ctx, walletId)
+}
+
+func (t *Tags) tags(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user := auth.GetUser(r)
+	walletId := features.GetWalletId(r)
+
+	tags, err := t.listTags(ctx, walletId, user)
+	if err != nil {
+		t.log.Error("Failed to get tags", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	navbar := models.Navbar{
+		SelectedWalletId: walletId,
+		Wallets:          []*models.Wallet{},
+		Username:         user.Username,
+		Title:            "Šparovec | Tags",
+	}
+
+	view := tagsView(tags, navbar)
+	err = view.Render(ctx, w)
+	if err != nil {
+		t.log.Error("Failed to render view", "error", err)
+	}
+}

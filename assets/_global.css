@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+script {
+  display: none !important;
+}
+
 .loading-indicator {
   display: none;
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/database"
+	"github.com/viddrobnic/sparovec/features/tags"
 	"github.com/viddrobnic/sparovec/features/wallets"
 	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/observability"
@@ -97,7 +98,6 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	transactionRepository := repository.NewTransaction(db)
 
 	authService := service.NewAuth(usersRepository, conf, logger)
-	tagsService := service.NewTags(tagsRepository, walletsRepository, logger)
 	transactionService := service.NewTransaction(transactionRepository, tagsRepository, walletsRepository, logger)
 	settingsService := service.NewSettings(walletsRepository, usersRepository, logger)
 
@@ -115,16 +115,15 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 		templatesDir,
 		logger.With("where", "dashboard_routes"),
 	)
-	tagsRoutes := routes.NewTags(
+	tagsRoutes := tags.New(
 		walletsRepository,
-		tagsService,
-		templatesDir,
+		tagsRepository,
 		logger.With("where", "tags_routes"),
 	)
 	transactionsRoutes := routes.NewTransactions(
 		walletsRepository,
 		transactionService,
-		tagsService,
+		nil,
 		templatesDir,
 		logger.With("where", "transactions_routes"),
 	)

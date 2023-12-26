@@ -32,36 +32,36 @@ templ navlist(selectedWalletId int) {
 }
 
 templ Layout(navbar models.Navbar) {
-	<script>
-		function changeWallet() {
-			const id = document.getElementById("wallets-select").value;
-			window.location.assign("/wallets/" + id);
-		}
-	</script>
 	@Index(navbar.Title) {
+		<script>
+			function changeWallet() {
+				const id = document.getElementById("wallets-select").value;
+				window.location.assign("/wallets/" + id);
+			}
+		</script>
 		<div class="justify-between shadow navbar bg-base-100">
 			<div class="justify-start">
 				if navbar.SelectedWalletId > 0 {
 					<div class="dropdown">
 						<label tabindex="0" class="md:hidden btn btn-ghost">
 							<svg
- 								xmlns="http://www.w3.org/2000/svg"
- 								class="w-5 h-5"
- 								fill="none"
- 								viewBox="0 0 24 24"
- 								stroke="currentColor"
+								xmlns="http://www.w3.org/2000/svg"
+								class="w-5 h-5"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
 							>
 								<path
- 									stroke-linecap="round"
- 									stroke-linejoin="round"
- 									stroke-width="2"
- 									d="M4 6h16M4 12h8m-8 6h16"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M4 6h16M4 12h8m-8 6h16"
 								></path>
 							</svg>
 						</label>
 						<ul
- 							tabindex="0"
- 							class="p-2 mt-3 w-52 shadow menu menu-md dropdown-content z-[1] bg-base-100 rounded-box"
+							tabindex="0"
+							class="p-2 mt-3 w-52 shadow menu menu-md dropdown-content z-[1] bg-base-100 rounded-box"
 						>
 							@navlist(navbar.SelectedWalletId)
 						</ul>
@@ -78,16 +78,16 @@ templ Layout(navbar models.Navbar) {
 			}
 			<div class="flex-grow justify-end space-x-2 md:flex-grow-0">
 				<select
- 					id="wallets-select"
- 					class="w-full select select-bordered overflow-ellipsis md:w-[200px]"
- 					onchange="changeWallet()"
- 					if len(navbar.Wallets) == 0 {
+					id="wallets-select"
+					class="w-full select select-bordered overflow-ellipsis md:w-[200px]"
+					onchange="changeWallet()"
+					if len(navbar.Wallets) == 0 {
 						disabled
 					}
 				>
 					<option
- 						disabled
- 						if navbar.SelectedWalletId == 0 {
+						disabled
+						if navbar.SelectedWalletId == 0 {
 							selected
 						}
 					>
@@ -99,8 +99,8 @@ templ Layout(navbar models.Navbar) {
 					</option>
 					for _, wallet := range navbar.Wallets {
 						<option
- 							value={ strconv.Itoa(wallet.Id) }
- 							if wallet.Id == navbar.SelectedWalletId {
+							value={ strconv.Itoa(wallet.Id) }
+							if wallet.Id == navbar.SelectedWalletId {
 								selected
 							}
 						>{ wallet.Name }</option>
@@ -109,16 +109,16 @@ templ Layout(navbar models.Navbar) {
 				<div class="dropdown dropdown-end">
 					<label tabindex="0" class="btn btn-ghost btn-circle avatar">
 						<svg
- 							xmlns="http://www.w3.org/2000/svg"
- 							width="24"
- 							height="24"
- 							viewBox="0 0 24 24"
- 							fill="none"
- 							stroke="currentColor"
- 							stroke-width="2"
- 							stroke-linecap="round"
- 							stroke-linejoin="round"
- 							class="lucide lucide-user-circle-2"
+							xmlns="http://www.w3.org/2000/svg"
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="lucide lucide-user-circle-2"
 						>
 							<path d="M18 20a6 6 0 0 0-12 0"></path>
 							<circle cx="12" cy="10" r="4"></circle>
@@ -126,8 +126,8 @@ templ Layout(navbar models.Navbar) {
 						</svg>
 					</label>
 					<ul
- 						tabindex="0"
- 						class="p-2 mt-3 w-52 shadow z-[1] menu menu-sm dropdown-content bg-base-100 rounded-box"
+						tabindex="0"
+						class="p-2 mt-3 w-52 shadow z-[1] menu menu-sm dropdown-content bg-base-100 rounded-box"
 					>
 						<li class="font-normal menu-title">{ navbar.Username }</li>
 						<li><a href="/auth/sign-out">Logout</a></li>
