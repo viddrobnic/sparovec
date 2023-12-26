@@ -14,6 +14,7 @@ import (
 )
 
 type WalletRepository interface {
+	ForUser(ctx context.Context, userId int) ([]*models.Wallet, error)
 	HasPermission(ctx context.Context, walletId, userId int) (bool, error)
 }
 
@@ -92,6 +93,13 @@ func (t *Tags) tags(w http.ResponseWriter, r *http.Request) {
 	user := auth.GetUser(r)
 	walletId := features.GetWalletId(r)
 
+	wallets, err := t.walletRepository.ForUser(ctx, user.Id)
+	if err != nil {
+		t.log.Error("Failed to get wallets", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	tags, err := t.listTags(ctx, walletId, user)
 	if err != nil {
 		t.log.Error("Failed to get tags", "error", err)
@@ -101,7 +109,7 @@ func (t *Tags) tags(w http.ResponseWriter, r *http.Request) {
 
 	navbar := models.Navbar{
 		SelectedWalletId: walletId,
-		Wallets:          []*models.Wallet{},
+		Wallets:          wallets,
 		Username:         user.Username,
 		Title:            "Šparovec | Tags",
 	}
