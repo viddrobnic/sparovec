@@ -1,6 +1,6 @@
 package models
 
-const defaultPageSize = 20
+const defaultPageSize = 2
 
 type Page struct {
 	Page     int

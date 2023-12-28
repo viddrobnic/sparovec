@@ -1,4 +1,4 @@
-package repository
+package transactions
 
 import (
 	"context"
@@ -38,15 +38,15 @@ func (dt *dbTransaction) ToModel() *models.Transaction {
 	}
 }
 
-type Transaction struct {
+type RepositoryImpl struct {
 	db *sqlx.DB
 }
 
-func NewTransaction(db *sqlx.DB) *Transaction {
-	return &Transaction{db: db}
+func NewRepository(db *sqlx.DB) *RepositoryImpl {
+	return &RepositoryImpl{db: db}
 }
 
-func (t *Transaction) Create(ctx context.Context, transaction *models.Transaction) error {
+func (t *RepositoryImpl) Create(ctx context.Context, transaction *models.Transaction) error {
 	var tagId *int
 	if transaction.Tag != nil {
 		tagId = &transaction.Tag.Id
@@ -82,7 +82,7 @@ func (t *Transaction) Create(ctx context.Context, transaction *models.Transactio
 	return nil
 }
 
-func (t *Transaction) Update(ctx context.Context, transaction *models.Transaction) error {
+func (t *RepositoryImpl) Update(ctx context.Context, transaction *models.Transaction) error {
 	var tagId sql.NullInt32
 	if transaction.Tag != nil {
 		tagId = sql.NullInt32{
@@ -107,7 +107,7 @@ func (t *Transaction) Update(ctx context.Context, transaction *models.Transactio
 	return err
 }
 
-func (t *Transaction) List(ctx context.Context, req *models.TransactionsListRequest) ([]*models.Transaction, int, error) {
+func (t *RepositoryImpl) List(ctx context.Context, req *models.TransactionsListRequest) ([]*models.Transaction, int, error) {
 	builder := sq.Select("*").From("transactions").
 		Where("wallet_id = ? ", req.WalletId)
 
@@ -148,7 +148,7 @@ func (t *Transaction) List(ctx context.Context, req *models.TransactionsListRequ
 	return transactions, count, nil
 }
 
-func (t *Transaction) Delete(ctx context.Context, id int) error {
+func (t *RepositoryImpl) Delete(ctx context.Context, id int) error {
 	builder := sq.Delete("transactions").Where("id = ?", id)
 
 	stmt, args, err := builder.ToSql()

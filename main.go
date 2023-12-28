@@ -18,6 +18,7 @@ import (
 	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/database"
 	"github.com/viddrobnic/sparovec/features/tags"
+	"github.com/viddrobnic/sparovec/features/transactions"
 	"github.com/viddrobnic/sparovec/features/wallets"
 	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/observability"
@@ -95,10 +96,9 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	usersRepository := repository.NewUsers(db)
 	walletsRepository := wallets.NewRepository(db)
 	tagsRepository := tags.NewRepository(db)
-	transactionRepository := repository.NewTransaction(db)
+	transactionRepository := transactions.NewRepository(db)
 
 	authService := service.NewAuth(usersRepository, conf, logger)
-	transactionService := service.NewTransaction(transactionRepository, tagsRepository, walletsRepository, logger)
 	settingsService := service.NewSettings(walletsRepository, usersRepository, logger)
 
 	authRoutes := routes.NewAuth(
@@ -120,11 +120,10 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 		tagsRepository,
 		logger.With("where", "tags_routes"),
 	)
-	transactionsRoutes := routes.NewTransactions(
+	transactionsRoutes := transactions.New(
+		transactionRepository,
+		tagsRepository,
 		walletsRepository,
-		transactionService,
-		nil,
-		templatesDir,
 		logger.With("where", "transactions_routes"),
 	)
 	settingsRoutes := routes.NewSettings(

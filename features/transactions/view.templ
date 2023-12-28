@@ -1,0 +1,396 @@
+package transactions
+
+import (
+	"github.com/viddrobnic/sparovec/features/layout"
+	"github.com/viddrobnic/sparovec/models"
+	"strconv"
+	"fmt"
+	"time"
+)
+
+type transactionsViewData struct {
+	navbar          models.Navbar
+	transactions    []*models.TransactionRender
+	tags            []*models.Tag
+	currentPage     string
+	totalPages      string
+	previousPageUrl templ.SafeURL
+	nextPageUrl     templ.SafeURL
+	urlParams       string
+}
+
+templ transactionsView(data transactionsViewData) {
+	@layout.Layout(data.navbar) {
+		<div class="flex flex-wrap gap-5 justify-between items-center">
+			<h1 class="text-5xl font-semibold">Transactions</h1>
+			<button class="shadow-lg btn btn-primary" onclick="show_create_dialog()">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class="mr-2 w-6 h-6"
+				>
+					<path d="M5 12h14"></path>
+					<path d="M12 5v14"></path>
+				</svg>
+				Add Transaction
+			</button>
+		</div>
+		<div class="overflow-x-auto mt-6 shadow-lg card bg-base-100 overflow-y-clip">
+			<div class="card-body" id="transactions_table">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th class="text-end">Value</th>
+							<th>Tags</th>
+							<th>Date</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, transaction := range data.transactions {
+							@transactionRow(transaction)
+						}
+						if len(data.transactions) == 0 {
+							<tr>
+								<td colspan="5" class="text-lg font-light text-center">
+									No transactions
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+				<div
+					class="flex flex-row items-center justify-end mt-2 text-sm font-medium space-x-6"
+				>
+					<div>Page { data.currentPage } of { data.totalPages } </div>
+					<div class="join">
+						<a
+							role="button"
+							class="join-item btn"
+							href={ data.previousPageUrl }
+							disabled?={ len(data.previousPageUrl) == 0  }
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="w-5 h-5"
+							>
+								<path d="m15 18-6-6 6-6"></path>
+							</svg>
+						</a>
+						<a
+							role="button"
+							class="join-item btn"
+							href={ data.nextPageUrl }
+							disabled?={ len(data.nextPageUrl) == 0 }
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="w-5 h-5"
+							>
+								<path d="m9 18 6-6-6-6"></path>
+							</svg>
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		@transactionDialog(data)
+		@deleteTransactionDialog(data)
+		<script>
+            function show_create_dialog() {
+                transaction_form.reset()
+
+                transaction_submit_type.value = "create"
+
+                transaction_alert.style.display = "none"
+                transaction_dialog.showModal()
+            }
+
+            // Handle save errors
+            document.body.addEventListener("saveError", function (evt) {
+                transaction_alert_message.innerHTML = evt.detail.value
+                transaction_alert.style.display = "grid"
+            })
+
+            // Handle save success
+            document.body.addEventListener("saveSuccess", function (evt) {
+                transaction_dialog.close()
+            })
+
+            document.body.addEventListener("deleteSuccess", function (evt) {
+                delete_transaction_dialog.close()
+            })
+        </script>
+	}
+}
+
+script showUpdateDialog(transaction *models.TransactionRender) {
+    transaction_form.reset()
+
+    transaction_submit_type.value = "update"
+    transaction_id.value = transaction.Id
+    transaction_name.value = transaction.Name
+    transaction_type_outcome.checked = transaction.Type === "outcome"
+    transaction_type_income.checked = transaction.Type === "income"
+    transaction_value.value = transaction.FormValue
+    transaction_date.value = transaction.FormCreatedAt
+    transaction_tag.value = transaction.FormTagId
+
+    transaction_alert.style.display = "none"
+    transaction_dialog.showModal()
+}
+
+script showDeleteDialog(id int, name string) {
+    delete_transaction_form_id.value = id
+    delete_transaction_warn_name.innerHTML = name
+    delete_transaction_dialog.showModal()
+}
+
+templ transactionRow(transaction *models.TransactionRender) {
+	<tr class="hover">
+		<td>{ transaction.Name }</td>
+		<td class="font-semibold whitespace-nowrap text-end">{ transaction.Value }</td>
+		<td>
+			if transaction.Tag != nil {
+				<div
+					class="inline-flex flex-nowrap items-center py-0.5 px-2.5 text-sm whitespace-nowrap rounded-lg border border-neutral-content bg-base-100"
+				>
+					{ transaction.Tag.Name }
+				</div>
+			}
+		</td>
+		<td class="font-light text-gray-600 whitespace-nowrap whitespace">
+			{ transaction.CreatedAt }
+		</td>
+		<td class="text-end">
+			<div class="dropdown dropdown-end">
+				<label tabindex="0" class="btn btn-ghost btn-circle btn-sm">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="w-4 h-4"
+					>
+						<circle cx="12" cy="12" r="1"></circle>
+						<circle cx="12" cy="5" r="1"></circle>
+						<circle cx="12" cy="19" r="1"></circle>
+					</svg>
+				</label>
+				<ul
+					tabindex="0"
+					class="p-2 w-52 shadow dropdown-content z-[1] menu bg-base-100 rounded-box"
+				>
+					<li>
+						<button
+							onclick={ showUpdateDialog(transaction) }
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="mr-2 w-4 h-4"
+							>
+								<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+								<path d="m15 5 4 4"></path>
+							</svg>
+							Edit
+						</button>
+					</li>
+					<li>
+						<button onclick={ showDeleteDialog(transaction.Id, transaction.Name) }>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="mr-2 w-4 h-4"
+							>
+								<path d="M3 6h18"></path>
+								<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+								<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+								<line x1="10" x2="10" y1="11" y2="17"></line>
+								<line x1="14" x2="14" y1="11" y2="17"></line>
+							</svg>
+							Delete
+						</button>
+					</li>
+				</ul>
+			</div>
+		</td>
+	</tr>
+}
+
+templ transactionDialog(data transactionsViewData) {
+	<dialog id="transaction_dialog" class="modal">
+		<div class="max-w-lg modal-box">
+			<h3 class="text-lg font-bold">Add a Transaction</h3>
+			<form
+				id="transaction_form"
+				class="pt-4 space-y-4"
+				hx-post={ fmt.Sprintf("/wallets/%d/transactions?%s", data.navbar.SelectedWalletId, data.urlParams) }
+				hx-swap="outerHTML"
+				hx-target="#transactions_table"
+				hx-select="#transactions_table"
+				hx-disabled-elt="#transaction_button"
+			>
+				<input id="transaction_id" name="id" type="hidden"/>
+				<input id="transaction_submit_type" name="submit_type" type="hidden"/>
+				<input
+					id="transaction_name"
+					name="name"
+					type="text"
+					class="w-full input input-bordered"
+					placeholder="Name"
+					required
+				/>
+				<div class="flex flex-col gap-2 items-center py-2 xs:flex-row xs:py-0">
+					<div class="join">
+						<input
+							id="transaction_type_outcome"
+							class="join-item btn"
+							type="radio"
+							name="type"
+							value="outcome"
+							aria-label="Outcome"
+							checked
+							required
+						/>
+						<input
+							id="transaction_type_income"
+							class="join-item btn"
+							type="radio"
+							name="type"
+							value="income"
+							aria-label="Income"
+							required
+						/>
+					</div>
+					<input
+						id="transaction_value"
+						type="text"
+						name="value"
+						class="w-full input input-bordered"
+						placeholder="Value"
+						required
+					/>
+				</div>
+				<div class="flex flex-col gap-2 xs:flex-row">
+					<input
+						id="transaction_date"
+						type="date"
+						name="date"
+						class="w-full xs:w-auto input input-bordered"
+						value={ time.Now().Format("2006-01-02") }
+						required
+					/>
+					<select
+						id="transaction_tag"
+						name="tag"
+						class="w-full xs:flex-grow xs:w-auto select select-bordered"
+					>
+						<option selected value="">No Tag Selected</option>
+						for _, tag := range data.tags {
+							<option value={ strconv.Itoa(tag.Id) }>{ tag.Name }</option>
+						}
+					</select>
+				</div>
+				<div role="alert" class="hidden alert" id="transaction_alert">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="w-6 h-6 stroke-current shrink-0"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+						></path>
+					</svg>
+					<span id="transaction_alert_message">Error</span>
+				</div>
+				<div class="justify-between pt-2 modal-action">
+					<button type="button" class="btn" onclick="transaction_dialog.close()">
+						Cancel
+					</button>
+					<button type="submit" class="btn btn-primary" id="transaction_button">
+						<span
+							class="loading loading-spinner loading-xs loading-indicator"
+						></span>
+						Save
+					</button>
+				</div>
+			</form>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button>close</button>
+		</form>
+	</dialog>
+}
+
+templ deleteTransactionDialog(data transactionsViewData) {
+	<dialog id="delete_transaction_dialog" class="modal">
+		<div class="max-w-sm modal-box">
+			<h3 class="text-lg font-bold">Delete a Transaction</h3>
+			<p class="pt-4">
+				Are you sure you want to delete transaction
+				<span class="font-bold" id="delete_transaction_warn_name"></span>? This action
+				can't be undone!
+			</p>
+			<form
+				id="delete_transaction_form"
+				hx-post={ fmt.Sprintf("/wallets/%d/transactions/delete?%s", data.navbar.SelectedWalletId, data.urlParams) }
+				hx-swap="outerHTML"
+				hx-target="#transactions_table"
+				hx-select="#transactions_table"
+				hx-disabled-elt="#delete_transaction_button"
+			>
+				<input id="delete_transaction_form_id" name="id" type="text" hidden/>
+				<div class="justify-between modal-action">
+					<button type="button" class="btn" onclick="delete_transaction_dialog.close()">
+						Cancel
+					</button>
+					<button type="submit" class="btn btn-error" id="delete_transaction_button">
+						<span
+							class="loading loading-spinner loading-xs loading-indicator"
+						></span>
+						Delete
+					</button>
+				</div>
+			</form>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button>close</button>
+		</form>
+	</dialog>
+}
