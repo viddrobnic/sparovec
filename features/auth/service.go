@@ -1,37 +1,16 @@
-package service
+package auth
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
+	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"encoding/json"
-	"log/slog"
 	"time"
 
-	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/models"
 )
 
-type AuthUserRepository interface {
-	GetByUsername(ctx context.Context, username string) (*models.UserCredentials, error)
-}
-
-type Auth struct {
-	repository AuthUserRepository
-
-	conf *config.Config
-	log  *slog.Logger
-}
-
-func NewAuth(repository AuthUserRepository, conf *config.Config, log *slog.Logger) *Auth {
-	return &Auth{
-		repository: repository,
-		conf:       conf,
-		log:        log,
-	}
-}
+const saltLenght = 16
 
 func (a *Auth) Authenticate(ctx context.Context, username, password string) (*models.User, error) {
 	user, err := a.repository.GetByUsername(ctx, username)
@@ -94,35 +73,27 @@ func (a *Auth) ValidateSession(session *models.Session) error {
 	return nil
 }
 
-func doPasswordsMatch(hashedPassword, salt, password string) bool {
-	hashedPasswordBytes, err := base64.StdEncoding.DecodeString(hashedPassword)
+func (a *Auth) CreateUser(ctx context.Context, username, password string) (*models.User, error) {
+	// Create saltBytes
+	saltBytes := make([]byte, saltLenght)
+	_, err := rand.Read(saltBytes)
 	if err != nil {
-		return false
+		a.log.Error("Failed to generate salt", "error", err)
+		return nil, models.ErrInternalServer
 	}
 
-	saltBytes, err := base64.StdEncoding.DecodeString(salt)
+	salt := base64.StdEncoding.EncodeToString(saltBytes)
+
+	// Hash password
+	hashedPasswordBytes := hashPassword([]byte(password), saltBytes)
+	hashedPassword := base64.StdEncoding.EncodeToString(hashedPasswordBytes)
+
+	// Insert user
+	user, err := a.repository.Insert(ctx, username, hashedPassword, salt)
 	if err != nil {
-		return false
+		a.log.Error("Failed to insert user", "error", err)
+		return nil, models.ErrInternalServer
 	}
 
-	hashedPasswordBytes2 := hashPassword([]byte(password), saltBytes)
-
-	return subtle.ConstantTimeCompare(hashedPasswordBytes, hashedPasswordBytes2) == 1
-}
-
-func signSession(sess *models.Session, signingKey string) ([]byte, error) {
-	// Marshal session
-	sessBytes, err := json.Marshal(sess)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create signature with HMAC
-	sum := hmac.New(sha256.New, []byte(signingKey))
-	_, err = sum.Write(sessBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return sum.Sum(nil), nil
+	return &user.User, nil
 }

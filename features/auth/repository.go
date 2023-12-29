@@ -1,4 +1,4 @@
-package repository
+package auth
 
 import (
 	"context"
@@ -9,15 +9,15 @@ import (
 	"github.com/viddrobnic/sparovec/models"
 )
 
-type Users struct {
+type RepositoryImpl struct {
 	db *sqlx.DB
 }
 
-func NewUsers(db *sqlx.DB) *Users {
-	return &Users{db: db}
+func NewRepository(db *sqlx.DB) *RepositoryImpl {
+	return &RepositoryImpl{db: db}
 }
 
-func (u *Users) Insert(ctx context.Context, username, password, salt string) (*models.UserCredentials, error) {
+func (r *RepositoryImpl) Insert(ctx context.Context, username, password, salt string) (*models.UserCredentials, error) {
 	builder := sq.Insert("users").
 		Columns("username", "password", "salt").
 		Values(username, password, salt).
@@ -29,11 +29,11 @@ func (u *Users) Insert(ctx context.Context, username, password, salt string) (*m
 	}
 
 	user := &models.UserCredentials{}
-	err = u.db.GetContext(ctx, user, stmt, args...)
+	err = r.db.GetContext(ctx, user, stmt, args...)
 	return user, err
 }
 
-func (u *Users) GetByUsername(ctx context.Context, username string) (*models.UserCredentials, error) {
+func (r *RepositoryImpl) GetByUsername(ctx context.Context, username string) (*models.UserCredentials, error) {
 	builder := sq.Select("*").From("users").Where("username = ?", username)
 
 	stmt, args, err := builder.ToSql()
@@ -42,7 +42,7 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (*models.Use
 	}
 
 	user := &models.UserCredentials{}
-	err = u.db.GetContext(ctx, user, stmt, args...)
+	err = r.db.GetContext(ctx, user, stmt, args...)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

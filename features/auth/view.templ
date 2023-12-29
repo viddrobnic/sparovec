@@ -1,0 +1,58 @@
+package auth
+
+import "github.com/viddrobnic/sparovec/features/layout"
+
+type signInViewData struct {
+	Username string
+	Password string
+	Error    string
+}
+
+templ signInView(data signInViewData) {
+	@layout.Index("Šparovec | Sign In") {
+		<div
+			class="flex flex-col justify-center items-center px-4 mx-auto max-w-xs h-screen prose"
+		>
+			<h1 class="">Sign In</h1>
+			if data.Error != "" {
+				<div role="alert" class="mb-4 alert">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="w-6 h-6 stroke-current shrink-0"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+						></path>
+					</svg>
+					<span>{ data.Error }</span>
+				</div>
+			}
+			<form action="/auth/sign-in" method="post">
+				<div class="space-y-3">
+					<input
+						type="text"
+						name="username"
+						placeholder="Username"
+						class="w-full input input-bordered"
+						value={ data.Username }
+						required
+					/>
+					<input
+						type="password"
+						name="password"
+						placeholder="Password"
+						class="w-full input input-bordered"
+						value={ data.Password }
+						required
+					/>
+				</div>
+				<button class="mt-6 w-full btn btn-primary" type="submit">Log In</button>
+			</form>
+		</div>
+	}
+}

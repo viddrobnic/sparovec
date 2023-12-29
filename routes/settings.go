@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/viddrobnic/sparovec/middleware/auth"
+	"github.com/viddrobnic/sparovec/features/auth"
 	"github.com/viddrobnic/sparovec/models"
 )
 

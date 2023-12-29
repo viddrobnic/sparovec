@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/viddrobnic/sparovec/middleware/auth"
+	"github.com/viddrobnic/sparovec/features/auth"
 	"github.com/viddrobnic/sparovec/models"
 )
 

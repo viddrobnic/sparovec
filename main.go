@@ -17,12 +17,11 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/database"
+	"github.com/viddrobnic/sparovec/features/auth"
 	"github.com/viddrobnic/sparovec/features/tags"
 	"github.com/viddrobnic/sparovec/features/transactions"
 	"github.com/viddrobnic/sparovec/features/wallets"
-	"github.com/viddrobnic/sparovec/middleware/auth"
 	"github.com/viddrobnic/sparovec/observability"
-	"github.com/viddrobnic/sparovec/repository"
 	"github.com/viddrobnic/sparovec/routes"
 	"github.com/viddrobnic/sparovec/service"
 )
@@ -80,10 +79,10 @@ func main() {
 }
 
 func createUser(db *sqlx.DB, logger *slog.Logger, username, password string) {
-	usersRepository := repository.NewUsers(db)
-	usersService := service.NewUser(usersRepository, logger)
+	usersRepository := auth.NewRepository(db)
+	usersService := auth.New(usersRepository, nil, logger)
 
-	user, err := usersService.Create(context.Background(), username, password)
+	user, err := usersService.CreateUser(context.Background(), username, password)
 	if err != nil {
 		_, _ = fmt.Println("Failed to create user")
 		return
@@ -93,19 +92,14 @@ func createUser(db *sqlx.DB, logger *slog.Logger, username, password string) {
 }
 
 func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
-	usersRepository := repository.NewUsers(db)
+	usersRepository := auth.NewRepository(db)
 	walletsRepository := wallets.NewRepository(db)
 	tagsRepository := tags.NewRepository(db)
 	transactionRepository := transactions.NewRepository(db)
 
-	authService := service.NewAuth(usersRepository, conf, logger)
+	authRoutes := auth.New(usersRepository, conf, logger)
 	settingsService := service.NewSettings(walletsRepository, usersRepository, logger)
 
-	authRoutes := routes.NewAuth(
-		authService,
-		templatesDir,
-		logger.With("where", "auth_routes"),
-	)
 	walletsRoutes := wallets.New(
 		walletsRepository,
 		logger.With("where", "wallets_routes"),
@@ -133,7 +127,7 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 		logger.With("where", "settings_routes"),
 	)
 
-	router := createRouter(conf, authService)
+	router := createRouter(conf, authRoutes)
 	staticFs, _ := fs.Sub(assetsDir, "assets")
 	router.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFs))))
 

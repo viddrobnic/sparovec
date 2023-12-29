@@ -1,42 +1,32 @@
-package routes
+package auth
 
 import (
 	"context"
-	"html/template"
-	"io/fs"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/viddrobnic/sparovec/middleware/auth"
+	"github.com/sagikazarmark/slog-shim"
+	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/models"
 )
 
-type AuthService interface {
-	Authenticate(ctx context.Context, username, password string) (*models.User, error)
-	CreateSession(user *models.User) (*models.Session, error)
+type Repository interface {
+	GetByUsername(ctx context.Context, username string) (*models.UserCredentials, error)
+	Insert(ctx context.Context, username, password, salt string) (*models.UserCredentials, error)
 }
 
 type Auth struct {
-	service AuthService
-	log     *slog.Logger
+	repository Repository
 
-	// Templates
-	signInTemplate *template.Template
+	conf *config.Config
+	log  *slog.Logger
 }
 
-func NewAuth(service AuthService, templates fs.FS, log *slog.Logger) *Auth {
-	signInTemplate := template.Must(template.ParseFS(
-		templates,
-		"templates/index.html",
-		"templates/auth/sign-in.html",
-	))
-
+func New(repository Repository, conf *config.Config, log *slog.Logger) *Auth {
 	return &Auth{
-		service: service,
-		log:     log,
-
-		signInTemplate: signInTemplate,
+		repository: repository,
+		conf:       conf,
+		log:        log,
 	}
 }
 
@@ -51,45 +41,50 @@ func (a *Auth) Mount(router chi.Router) {
 }
 
 func (a *Auth) signIn(w http.ResponseWriter, r *http.Request) {
-	user := auth.GetUser(r)
+	ctx := r.Context()
+	user := GetUser(r)
 	if user != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	err := renderTemplate(w, a.signInTemplate, nil)
+	view := signInView(signInViewData{})
+	err := view.Render(ctx, w)
 	if err != nil {
-		a.log.Error("Failed to render template", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		a.log.ErrorContext(ctx, "Failed to render sign in template", "error", err)
 	}
 }
 
 func (a *Auth) submitSignIn(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
-	user, err := a.service.Authenticate(r.Context(), username, password)
+	user, err := a.Authenticate(ctx, username, password)
 	if err == models.ErrInvalidCredentials {
-		data := &models.SignInContext{
+		data := signInViewData{
 			Username: username,
 			Password: password,
 			Error:    "Invalid credentials",
 		}
-		err := a.signInTemplate.Execute(w, data)
+
+		view := signInView(data)
+		err := view.Render(ctx, w)
 		if err != nil {
-			a.log.Error("Failed to render template", "error", err)
+			a.log.ErrorContext(ctx, "Failed to render template", "error", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 		return
 	} else if err != nil {
-		a.log.Error("Failed to authenticate user", "error", err)
+		a.log.ErrorContext(ctx, "Failed to authenticate user", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	session, err := a.service.CreateSession(user)
+	session, err := a.CreateSession(user)
 	if err != nil {
-		a.log.Error("Failed to create session", "error", err)
+		a.log.ErrorContext(ctx, "Failed to create session", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 
