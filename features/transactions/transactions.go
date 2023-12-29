@@ -14,8 +14,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/viddrobnic/sparovec/features"
 	"github.com/viddrobnic/sparovec/features/auth"
+	"github.com/viddrobnic/sparovec/features/htmx"
 	"github.com/viddrobnic/sparovec/models"
-	"github.com/viddrobnic/sparovec/routes"
 )
 
 type Repository interface {
@@ -204,7 +204,7 @@ func (t *Transactions) saveTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, routes.HtmxEventSaveSuccess)
+	w.Header().Set(htmx.HeaderTriggerAfterSettle, htmx.EventSaveSuccess)
 	t.transactions(w, r)
 }
 
@@ -231,14 +231,14 @@ func (t *Transactions) deleteTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, routes.HtmxEventDeleteSuccess)
+	w.Header().Set(htmx.HeaderTriggerAfterSettle, htmx.EventDeleteSuccess)
 	t.transactions(w, r)
 }
 
 func (t *Transactions) handleError(w http.ResponseWriter, err error) {
 	var invalidForm *models.ErrInvalidForm
 	if errors.As(err, &invalidForm) {
-		saveError := routes.HtmxEventSaveError{ErrorMessage: invalidForm.Message}
+		saveError := htmx.EventSaveError{ErrorMessage: invalidForm.Message}
 		saveErrorJson, err := json.Marshal(saveError)
 		if err != nil {
 			t.log.Error("Failed to marshal save error", "error", err)
@@ -246,8 +246,8 @@ func (t *Transactions) handleError(w http.ResponseWriter, err error) {
 			return
 		}
 
-		w.Header().Set(routes.HtmxHeaderReswap, routes.HtmxSwapNone)
-		w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, string(saveErrorJson))
+		w.Header().Set(htmx.HeaderReswap, htmx.SwapNone)
+		w.Header().Set(htmx.HeaderTriggerAfterSettle, string(saveErrorJson))
 
 		w.WriteHeader(http.StatusOK)
 	} else {

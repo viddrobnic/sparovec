@@ -1,0 +1,248 @@
+package wallets
+
+import "github.com/viddrobnic/sparovec/models"
+import "github.com/viddrobnic/sparovec/features/layout"
+import "fmt"
+import "strconv"
+
+type settingsViewData struct {
+	Navbar  models.Navbar
+	Wallet  *models.Wallet
+	Members []*models.Member
+}
+
+templ settingsView(data settingsViewData) {
+	@layout.Layout(data.Navbar) {
+		<div>
+			<h1 class="text-5xl font-semibold">Settings</h1>
+			<div class="mt-6 shadow-lg card bg-base-100">
+				<div class="grid sm:grid-cols-3 card-body">
+					@nameSettings(data)
+					<div class="sm:col-span-3 divider"></div>
+					@memberSettings(data)
+					<div class="sm:col-span-3 divider"></div>
+					@dangerZoneView(j
+				</div>
+			</div>
+		</div>
+		<!-- Delete dialog -->
+		<dialog id="delete_wallet_modal" class="modal">
+			<div class="max-w-sm modal-box">
+				<h3 class="text-lg font-bold">Delete a Wallet</h3>
+				<p class="pt-4">
+					Are you sure you want to delete wallet
+					<span class="font-bold">{ data.Wallet.Name }</span>? This action
+					can't be undone!
+				</p>
+				<form
+					action={ templ.SafeURL(fmt.Sprintf("/wallets/%d/settings/delete", data.Navbar.SelectedWalletId)) }
+					method="POST"
+				>
+					<div class="justify-between modal-action">
+						<button type="button" class="btn" onclick="delete_wallet_modal.close()">Cancel</button>
+						<button type="submit" class="btn btn-error">Delete</button>
+					</div>
+				</form>
+			</div>
+			<form method="dialog" class="modal-backdrop">
+				<button>close</button>
+			</form>
+		</dialog>
+	}
+}
+
+templ nameSettings(data settingsViewData) {
+	<div class="sm:col-span-1">
+		<div class="flex flex-row items-center">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="mr-2 w-6 h-6"
+			>
+				<path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"></path>
+				<path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"></path>
+				<path d="M12 2v2"></path>
+				<path d="M12 22v-2"></path>
+				<path d="m17 20.66-1-1.73"></path>
+				<path d="M11 10.27 7 3.34"></path>
+				<path d="m20.66 17-1.73-1"></path>
+				<path d="m3.34 7 1.73 1"></path>
+				<path d="M14 12h8"></path>
+				<path d="M2 12h2"></path>
+				<path d="m20.66 7-1.73 1"></path>
+				<path d="m3.34 17 1.73-1"></path>
+				<path d="m17 3.34-1 1.73"></path>
+				<path d="m11 13.73-4 6.93"></path>
+			</svg>
+			<h2 class="text-xl font-medium">General</h2>
+		</div>
+		<p class="mt-1 text-sm">Edit general wallet information.</p>
+	</div>
+	<div class="sm:col-span-2">
+		<form
+			id="update_wallet_name_form"
+			hx-post={ fmt.Sprintf("/wallets/%d/settings/name", data.Navbar.SelectedWalletId) }
+			hx-swap="outerHTML"
+			hx-target="#update_wallet_name_form"
+			hx-select="#update_wallet_name_form"
+			hx-disabled-elt="#update_wallet_name_button"
+		>
+			<label class="w-full form-control">
+				<div class="label">
+					<span class="label-text">Name</span>
+				</div>
+				<div class="flex flex-row space-x-4">
+					<input
+						type="text"
+						placeholder="Wallet Name"
+						name="name"
+						value={ data.Wallet.Name }
+						class="w-full input input-bordered"
+					/>
+					<button type="submit" class="btn btn-primary" id="update_wallet_name_button">
+						<span class="loading loading-spinner loading-xs loading-indicator"></span>
+						Save
+					</button>
+				</div>
+			</label>
+		</form>
+	</div>
+}
+
+templ memberSettings(data settingsViewData) {
+	<div class="sm:col-span-1">
+		<div class="flex flex-row items-center">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="mr-2 w-6 h-6"
+			>
+				<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+				<circle cx="9" cy="7" r="4"></circle>
+				<path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+				<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+			</svg>
+			<h2 class="text-xl font-medium">Members</h2>
+		</div>
+		<p class="mt-1 text-sm">Add and remove members from this wallet.</p>
+	</div>
+	<div class="sm:col-span-2" id="add_members">
+		<table class="table">
+			<tbody>
+				for _, member := range data.Members {
+					<tr class={ templ.KV("hover", !member.IsSelf) }>
+						<td class="text-lg">
+							{ member.Username }
+							if member.IsSelf {
+								<span class="ml-2 badge badge-md badge-accent">You</span>
+							}
+						</td>
+						<td class="text-end">
+							if !member.IsSelf {
+								<form
+									hx-post={ fmt.Sprintf("/wallets/%d/settings/remove-member", data.Navbar.SelectedWalletId) }
+									hx-swap="outerHTML"
+									hx-target="#add_members"
+									hx-select="#add_members"
+								>
+									<input type="text" name="id" value={ strconv.Itoa(member.Id) } hidden/>
+									<button class="btn btn-sm btn-outline btn-error" type="submit">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											class="w-5 h-5"
+										>
+											<path d="M3 6h18"></path>
+											<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+											<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+											<line x1="10" x2="10" y1="11" y2="17"></line>
+											<line x1="14" x2="14" y1="11" y2="17"></line>
+										</svg>
+										Remove
+									</button>
+								</form>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		<form
+			class="flex flex-row mt-4 space-x-4"
+			hx-post={ fmt.Sprintf("/wallets/%d/settings/add-member", data.Navbar.SelectedWalletId) }
+			hx-swap="outerHTML"
+			hx-target="#add_members"
+			hx-select="#add_members"
+			hx-disabled-elt="#add_member_button"
+		>
+			<input
+				type="text"
+				name="username"
+				class="w-full input input-bordered"
+				placeholder="Add member"
+			/>
+			<button class="btn btn-primary" id="add_member_button">
+				<span class="loading loading-spinner loading-xs loading-indicator"></span>
+				Add
+			</button>
+		</form>
+	</div>
+}
+
+templ dangerZoneView() {
+	<div class="sm:col-span-1">
+		<div class="flex flex-row items-center">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="mr-2 w-6 h-6"
+			>
+				<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+				<path d="M12 9v4"></path>
+				<path d="M12 17h.01"></path>
+			</svg>
+			<h2 class="text-xl font-medium">Danger Zone</h2>
+		</div>
+		<p class="mt-1 text-sm">Perform dangerous actions.</p>
+	</div>
+	<div class="sm:col-span-2">
+		<div role="alert" class="alert">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="w-6 h-6 stroke-current shrink-0"
+				fill="none"
+				viewBox="0 0 24 24"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+			</svg>
+			<div>
+				<h3 class="font-bold">Delete Wallet</h3>
+				<div class="text-xs">Once you delete a wallet, there is no going back.</div>
+			</div>
+			<button
+				class="btn btn-sm btn-error btn-outline"
+				onclick="delete_wallet_modal.showModal()"
+			>Delete</button>
+		</div>
+	</div>
+}

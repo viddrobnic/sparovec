@@ -22,8 +22,6 @@ import (
 	"github.com/viddrobnic/sparovec/features/transactions"
 	"github.com/viddrobnic/sparovec/features/wallets"
 	"github.com/viddrobnic/sparovec/observability"
-	"github.com/viddrobnic/sparovec/routes"
-	"github.com/viddrobnic/sparovec/service"
 )
 
 //go:embed config.toml
@@ -31,9 +29,6 @@ var defaultConfig []byte
 
 //go:embed migrations
 var migrationsDir embed.FS
-
-//go:embed templates
-var templatesDir embed.FS
 
 //go:embed assets/*
 var assetsDir embed.FS
@@ -98,17 +93,16 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	transactionRepository := transactions.NewRepository(db)
 
 	authRoutes := auth.New(usersRepository, conf, logger)
-	settingsService := service.NewSettings(walletsRepository, usersRepository, logger)
-
 	walletsRoutes := wallets.New(
 		walletsRepository,
+		usersRepository,
 		logger.With("where", "wallets_routes"),
 	)
-	dashboardRoutes := routes.NewDashboard(
-		walletsRepository,
-		templatesDir,
-		logger.With("where", "dashboard_routes"),
-	)
+	// dashboardRoutes := routes.NewDashboard(
+	// 	walletsRepository,
+	// 	templatesDir,
+	// 	logger.With("where", "dashboard_routes"),
+	// )
 	tagsRoutes := tags.New(
 		walletsRepository,
 		tagsRepository,
@@ -120,12 +114,6 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 		walletsRepository,
 		logger.With("where", "transactions_routes"),
 	)
-	settingsRoutes := routes.NewSettings(
-		walletsRepository,
-		settingsService,
-		templatesDir,
-		logger.With("where", "settings_routes"),
-	)
 
 	router := createRouter(conf, authRoutes)
 	staticFs, _ := fs.Sub(assetsDir, "assets")
@@ -133,10 +121,9 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 
 	authRoutes.Mount(router)
 	walletsRoutes.Mount(router)
-	dashboardRoutes.Mount(router)
+	// dashboardRoutes.Mount(router)
 	tagsRoutes.Mount(router)
 	transactionsRoutes.Mount(router)
-	settingsRoutes.Mount(router)
 
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", conf.API.ListenAddress, conf.API.Port), router)
 	if err != nil {

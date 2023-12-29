@@ -9,8 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/viddrobnic/sparovec/features"
 	"github.com/viddrobnic/sparovec/features/auth"
+	"github.com/viddrobnic/sparovec/features/htmx"
 	"github.com/viddrobnic/sparovec/models"
-	"github.com/viddrobnic/sparovec/routes"
 )
 
 type WalletRepository interface {
@@ -138,7 +138,7 @@ func (t *Tags) createTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, routes.HtmxEventCreateSuccess)
+	w.Header().Set(htmx.HeaderTriggerAfterSettle, htmx.EventCreateSuccess)
 	t.tags(w, r)
 }
 
@@ -167,7 +167,7 @@ func (t *Tags) updateTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, routes.HtmxEventUpdateSuccess)
+	w.Header().Set(htmx.HeaderTriggerAfterSettle, htmx.EventUpdateSuccess)
 	t.tags(w, r)
 }
 
@@ -195,6 +195,6 @@ func (t *Tags) deleteTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(routes.HtmxHeaderTriggerAfterSettle, routes.HtmxEventDeleteSuccess)
+	w.Header().Set(htmx.HeaderTriggerAfterSettle, htmx.EventDeleteSuccess)
 	t.tags(w, r)
 }
