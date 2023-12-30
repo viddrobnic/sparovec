@@ -3,40 +3,11 @@ package transactions
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	"github.com/viddrobnic/sparovec/models"
 )
-
-type dbTransaction struct {
-	Id        int       `db:"id"`
-	WalletId  int       `db:"wallet_id"`
-	Name      string    `db:"name"`
-	Value     int       `db:"value"`
-	CreatedAt time.Time `db:"created_at"`
-
-	TagId sql.NullInt32 `db:"tag_id"`
-}
-
-func (dt *dbTransaction) ToModel() *models.Transaction {
-	var tag *models.Tag
-	if dt.TagId.Valid {
-		tag = &models.Tag{
-			Id: int(dt.TagId.Int32),
-		}
-	}
-
-	return &models.Transaction{
-		Id:        dt.Id,
-		WalletId:  dt.WalletId,
-		Name:      dt.Name,
-		Value:     dt.Value,
-		Tag:       tag,
-		CreatedAt: dt.CreatedAt,
-	}
-}
 
 type RepositoryImpl struct {
 	db *sqlx.DB
@@ -72,7 +43,7 @@ func (t *RepositoryImpl) Create(ctx context.Context, transaction *models.Transac
 		return err
 	}
 
-	dbTransaction := &dbTransaction{}
+	dbTransaction := &models.DbTransaction{}
 	err = t.db.GetContext(ctx, dbTransaction, stmt, args...)
 	if err != nil {
 		return err
@@ -123,7 +94,7 @@ func (t *RepositoryImpl) List(ctx context.Context, req *models.TransactionsListR
 		return nil, 0, err
 	}
 
-	dbTransactions := []*dbTransaction{}
+	dbTransactions := []*models.DbTransaction{}
 	err = t.db.SelectContext(ctx, &dbTransactions, stmt, args...)
 	if err != nil {
 		return nil, 0, err

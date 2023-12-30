@@ -18,6 +18,7 @@ import (
 	"github.com/viddrobnic/sparovec/config"
 	"github.com/viddrobnic/sparovec/database"
 	"github.com/viddrobnic/sparovec/features/auth"
+	"github.com/viddrobnic/sparovec/features/dashboard"
 	"github.com/viddrobnic/sparovec/features/tags"
 	"github.com/viddrobnic/sparovec/features/transactions"
 	"github.com/viddrobnic/sparovec/features/wallets"
@@ -91,6 +92,7 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 	walletsRepository := wallets.NewRepository(db)
 	tagsRepository := tags.NewRepository(db)
 	transactionRepository := transactions.NewRepository(db)
+	dashboardRepository := dashboard.NewRepository(db)
 
 	authRoutes := auth.New(usersRepository, conf, logger)
 	walletsRoutes := wallets.New(
@@ -98,11 +100,11 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 		usersRepository,
 		logger.With("where", "wallets_routes"),
 	)
-	// dashboardRoutes := routes.NewDashboard(
-	// 	walletsRepository,
-	// 	templatesDir,
-	// 	logger.With("where", "dashboard_routes"),
-	// )
+	dashboardRoutes := dashboard.New(
+		dashboardRepository,
+		walletsRepository,
+		logger.With("where", "dashboard_routes"),
+	)
 	tagsRoutes := tags.New(
 		walletsRepository,
 		tagsRepository,
@@ -121,7 +123,7 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 
 	authRoutes.Mount(router)
 	walletsRoutes.Mount(router)
-	// dashboardRoutes.Mount(router)
+	dashboardRoutes.Mount(router)
 	tagsRoutes.Mount(router)
 	transactionsRoutes.Mount(router)
 

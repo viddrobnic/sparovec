@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"fmt"
 	"math"
 	"strconv"
@@ -86,4 +87,32 @@ type TransactionsContext struct {
 	UrlParams       string
 	PreviousPageUrl string
 	NextPageUrl     string
+}
+
+type DbTransaction struct {
+	Id        int       `db:"id"`
+	WalletId  int       `db:"wallet_id"`
+	Name      string    `db:"name"`
+	Value     int       `db:"value"`
+	CreatedAt time.Time `db:"created_at"`
+
+	TagId sql.NullInt32 `db:"tag_id"`
+}
+
+func (dt *DbTransaction) ToModel() *Transaction {
+	var tag *Tag
+	if dt.TagId.Valid {
+		tag = &Tag{
+			Id: int(dt.TagId.Int32),
+		}
+	}
+
+	return &Transaction{
+		Id:        dt.Id,
+		WalletId:  dt.WalletId,
+		Name:      dt.Name,
+		Value:     dt.Value,
+		Tag:       tag,
+		CreatedAt: dt.CreatedAt,
+	}
 }
