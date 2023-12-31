@@ -107,7 +107,7 @@ func (t *Transactions) transactions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	err = t.expandTags(ctx, transactions)
+	err = t.ExpandTags(ctx, transactions)
 	if err != nil {
 		t.log.WarnContext(ctx, "Failed to expand tags", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -279,7 +279,7 @@ func (t *Transactions) validateTag(ctx context.Context, tag *models.Tag, walletI
 	return nil
 }
 
-func (t *Transactions) expandTags(ctx context.Context, transactions []*models.Transaction) error {
+func (t *Transactions) ExpandTags(ctx context.Context, transactions []*models.Transaction) error {
 	ids := make([]int, 0, len(transactions))
 	for _, transaction := range transactions {
 		if transaction.Tag != nil {

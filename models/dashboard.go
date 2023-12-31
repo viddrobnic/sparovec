@@ -1,8 +1,14 @@
 package models
 
-type DashboardType string
+type TagBalance struct {
+	Tag     *Tag
+	Balance int
+}
 
-const (
-	DashboardTypeIncome  DashboardType = "income"
-	DashboardTypeExpense DashboardType = "expense"
-)
+type DashboardData struct {
+	Income         int
+	Outcome        int
+	Balance        int
+	NrTransactions int
+	TagBalance     []TagBalance
+}

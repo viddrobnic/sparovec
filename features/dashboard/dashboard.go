@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -22,9 +23,14 @@ type WalletRepository interface {
 	HasPermission(ctx context.Context, walletId, userId int) (bool, error)
 }
 
+type TransactionsService interface {
+	ExpandTags(ctx context.Context, transactions []*models.Transaction) error
+}
+
 type Dashboard struct {
-	repository       Repository
-	walletRepository WalletRepository
+	repository          Repository
+	walletRepository    WalletRepository
+	transactionsService TransactionsService
 
 	log *slog.Logger
 }
@@ -32,11 +38,13 @@ type Dashboard struct {
 func New(
 	repository Repository,
 	walletRepository WalletRepository,
+	transactionsService TransactionsService,
 	log *slog.Logger,
 ) *Dashboard {
 	return &Dashboard{
-		repository:       repository,
-		walletRepository: walletRepository,
+		repository:          repository,
+		walletRepository:    walletRepository,
+		transactionsService: transactionsService,
 
 		log: log,
 	}
@@ -85,9 +93,15 @@ func (d *Dashboard) dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = d.repository.GetTransactions(ctx, walletId, form.year, form.month)
+	transactions, err := d.repository.GetTransactions(ctx, walletId, form.year, form.month)
 	if err != nil {
 		d.log.ErrorContext(ctx, "Failed to get transactions", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	err = d.transactionsService.ExpandTags(ctx, transactions)
+	if err != nil {
+		d.log.ErrorContext(ctx, "Failed to expand tags", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -102,7 +116,7 @@ func (d *Dashboard) dashboard(w http.ResponseWriter, r *http.Request) {
 		month:   form.month,
 		year:    form.year,
 		maxYear: time.Now().Year(),
-		dType:   form.dType,
+		data:    createDashboardData(transactions),
 	}
 	view := dashboardView(data)
 	err = view.Render(ctx, w)
@@ -114,14 +128,12 @@ func (d *Dashboard) dashboard(w http.ResponseWriter, r *http.Request) {
 type dashboardForm struct {
 	year  int
 	month time.Month
-	dType models.DashboardType
 }
 
 func dashboardFormFromRequest(r *http.Request) dashboardForm {
 	form := dashboardForm{
 		year:  time.Now().Year(),
 		month: time.Now().Month(),
-		dType: models.DashboardTypeExpense,
 	}
 
 	yearStr := r.FormValue("year")
@@ -140,10 +152,56 @@ func dashboardFormFromRequest(r *http.Request) dashboardForm {
 		}
 	}
 
-	dType := r.FormValue("type")
-	if dType != "" {
-		form.dType = models.DashboardType(dType)
+	return form
+}
+
+func createDashboardData(transactions []*models.Transaction) models.DashboardData {
+	data := models.DashboardData{
+		NrTransactions: len(transactions),
+		TagBalance:     []models.TagBalance{},
 	}
 
-	return form
+	tagBalance := make(map[int]int)
+	tags := make(map[int]*models.Tag)
+
+	for _, tr := range transactions {
+		if tr.Value > 0 {
+			data.Income += tr.Value
+		} else {
+			data.Outcome += tr.Value
+
+			if tr.Tag != nil {
+				tagBalance[tr.Tag.Id] += tr.Value
+				tags[tr.Tag.Id] = tr.Tag
+			} else {
+				tagBalance[0] += tr.Value
+				tags[0] = &models.Tag{
+					Name:     "Other",
+					WalletId: tr.WalletId,
+				}
+			}
+		}
+
+		data.Balance += tr.Value
+	}
+
+	for tagId, balance := range tagBalance {
+		data.TagBalance = append(data.TagBalance, models.TagBalance{
+			Tag:     tags[tagId],
+			Balance: balance,
+		})
+	}
+
+	sort.Slice(data.TagBalance, func(i, j int) bool {
+		b1 := data.TagBalance[i]
+		b2 := data.TagBalance[j]
+
+		if b1.Balance == b2.Balance {
+			return b1.Tag.Name < b2.Tag.Name
+		}
+
+		return b1.Balance < b2.Balance
+	})
+
+	return data
 }

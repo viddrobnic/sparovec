@@ -100,21 +100,22 @@ func serve(conf *config.Config, db *sqlx.DB, logger *slog.Logger) {
 		usersRepository,
 		logger.With("where", "wallets_routes"),
 	)
+	transactionsRoutes := transactions.New(
+		transactionRepository,
+		tagsRepository,
+		walletsRepository,
+		logger.With("where", "transactions_routes"),
+	)
 	dashboardRoutes := dashboard.New(
 		dashboardRepository,
 		walletsRepository,
+		transactionsRoutes,
 		logger.With("where", "dashboard_routes"),
 	)
 	tagsRoutes := tags.New(
 		walletsRepository,
 		tagsRepository,
 		logger.With("where", "tags_routes"),
-	)
-	transactionsRoutes := transactions.New(
-		transactionRepository,
-		tagsRepository,
-		walletsRepository,
-		logger.With("where", "transactions_routes"),
 	)
 
 	router := createRouter(conf, authRoutes)

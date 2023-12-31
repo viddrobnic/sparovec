@@ -31,11 +31,12 @@ type TransactionRender struct {
 	FormCreatedAt string
 }
 
-func (t *Transaction) Render() *TransactionRender {
+func FormatCurrency(value int) string {
 	p := message.NewPrinter(language.Slovenian)
-	value := p.Sprintf("%.2f", float64(t.Value)/100)
-	value += " €"
+	return p.Sprintf("%.2f", float64(value)/100) + " €"
+}
 
+func (t *Transaction) Render() *TransactionRender {
 	var transactionType string
 	if t.Value < 0 {
 		transactionType = "outcome"
@@ -51,7 +52,7 @@ func (t *Transaction) Render() *TransactionRender {
 	return &TransactionRender{
 		Id:            t.Id,
 		Name:          t.Name,
-		Value:         value,
+		Value:         FormatCurrency(t.Value),
 		FormValue:     fmt.Sprintf("%.2f", math.Abs(float64(t.Value))/100),
 		Type:          transactionType,
 		Tag:           t.Tag,

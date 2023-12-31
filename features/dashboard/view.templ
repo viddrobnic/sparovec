@@ -13,23 +13,24 @@ type dashboardViewData struct {
 	month   time.Month
 	year    int
 	maxYear int
-	dType   models.DashboardType
+	data    models.DashboardData
 }
 
-func dashboardUrl(selectedWalletId, year int, month time.Month, dashboardType models.DashboardType) templ.SafeURL {
-	url := fmt.Sprintf("/wallets/%d?year=%d&month=%d&type=%s", selectedWalletId, year, month, dashboardType)
+func dashboardUrl(selectedWalletId, year int, month time.Month) templ.SafeURL {
+	url := fmt.Sprintf("/wallets/%d?year=%d&month=%d", selectedWalletId, year, month)
 	return templ.SafeURL(url)
 }
 
 templ dashboardView(data dashboardViewData) {
 	@layout.Layout(data.navbar) {
+		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<div class="flex flex-wrap gap-5 justify-between items-center">
 			<h1 class="text-5xl font-semibold">Dashboard</h1>
 			<div class="flex flex-row gap-2">
 				<select
 					class="select select-bordered w-fit"
 					id="year_select"
-					onchange={ onChangeDate(data.navbar.SelectedWalletId, data.dType) }
+					onchange={ onChangeDate(data.navbar.SelectedWalletId) }
 				>
 					for year := data.maxYear; year >= 2020; year-- {
 						<option
@@ -41,7 +42,7 @@ templ dashboardView(data dashboardViewData) {
 				<select
 					class="select select-bordered w-fit"
 					id="month_select"
-					onchange={ onChangeDate(data.navbar.SelectedWalletId, data.dType) }
+					onchange={ onChangeDate(data.navbar.SelectedWalletId) }
 				>
 					for month := 1; month<= 12; month++ {
 						<option
@@ -52,38 +53,76 @@ templ dashboardView(data dashboardViewData) {
 				</select>
 			</div>
 		</div>
-		@stats()
-		<div role="tablist" class="tabs tabs-boxed bg-base-100 shadow-lg mt-8 w-fit">
-			<a
-				role="tab"
-				class={ "tab", templ.KV("tab-active", data.dType == models.DashboardTypeExpense) }
-				href={ dashboardUrl(data.navbar.SelectedWalletId, data.year, data.month, models.DashboardTypeExpense) }
-			>Expenses</a>
-			<a
-				role="tab"
-				class={ "tab", templ.KV("tab-active", data.dType == models.DashboardTypeIncome) }
-				href={ dashboardUrl(data.navbar.SelectedWalletId, data.year, data.month, models.DashboardTypeIncome) }
-			>Money In</a>
-		</div>
+		@stats(data.data)
+		<h2 class="mt-8 pl-2 text-3xl font-semibolr">Expenses by Category</h2>
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
 			<div class="card shadow-lg bg-base-100 lg:col-span-4">
-				<div class="card-body">graf</div>
+				<div class="card-body h-[450px]" id="piechart"></div>
 			</div>
 			<div class="card shadow-lg bg-base-100 lg:col-span-3">
-				<div class="card-body">seznam</div>
+				<div class="card-body md:max-h-[450px] md:overflow-auto scroll-m-1">
+					for idx, tagBalance := range data.data.TagBalance {
+						if idx > 0 {
+							<div class="divider"></div>
+						}
+						@tagCard(tagBalance.Tag.Name, tagBalance.Balance)
+					}
+				</div>
 			</div>
 		</div>
+		@drawChart(data.data.TagBalance)
 	}
 }
 
-script onChangeDate(selectedWalletId int, dashboardType models.DashboardType) {
-	const year = year_select.value
-	const month = month_select.value
-	const url = `/wallets/${selectedWalletId}?year=${year}&month=${month}&type=${dashboardType}`
-	window.location.assign(url)
+script onChangeDate(selectedWalletId int ) {
+	const year = year_select.value;
+	const month = month_select.value;
+	const url = `/wallets/${selectedWalletId}?year=${year}&month=${month}`;
+	window.location.assign(url);
 }
 
-templ stats() {
+script drawChart(data []models.TagBalance) {
+	google.charts.load('current', {'packages':['corechart']});
+    google.charts.setOnLoadCallback(renderChart);
+
+	function renderChart() {
+		piechart.innerHTML = "";
+
+		const chartData = google.visualization.arrayToDataTable([
+				['Tags', 'Balance'],
+				...data.map((item) => [item.Tag.Name, -item.Balance/100]),
+		]);
+
+		const chart = new google.visualization.PieChart(document.getElementById('piechart'));
+		chart.draw(chartData, {
+			title: 'Tags',
+			backgroundColor: '#faf7f5', // bg-base-100
+			chartArea: {
+				left: 10,
+				top: 10,
+				right: 10,
+				bottom: 10,
+			},
+			pieSliceText: 'label',
+			legend: 'none',
+			colors: [
+				'#ef4444',
+				'#f97316',
+				'#22c55e',
+				'#06b6d4',
+				'#3b82f6',
+				'#a855f7',
+				'#d946ef',
+				'#ec4899',
+				'#f43f5e',
+			],
+		});
+	}
+
+	window.addEventListener("resize", renderChart);
+}
+
+templ stats(data models.DashboardData) {
 	<div class="pt-6">
 		<div class="grid gap-4 xs:grid-cols-2 lg:grid-cols-4">
 			<div class="stats shadow-lg">
@@ -92,7 +131,9 @@ templ stats() {
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
 					</div>
 					<div class="stat-title">Money In</div>
-					<div class="stat-value">89,400</div>
+					<div class="stat-value">
+						{ models.FormatCurrency(data.Income) }
+					</div>
 				</div>
 			</div>
 			<div class="stats shadow-lg">
@@ -101,7 +142,9 @@ templ stats() {
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-down"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"></polyline><polyline points="16 17 22 17 22 11"></polyline></svg>
 					</div>
 					<div class="stat-title">Expenses</div>
-					<div class="stat-value">89,400</div>
+					<div class="stat-value">
+						{ models.FormatCurrency(data.Outcome) }
+					</div>
 				</div>
 			</div>
 			<div class="stats shadow-lg">
@@ -110,7 +153,9 @@ templ stats() {
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-banknote"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
 					</div>
 					<div class="stat-title">Balance</div>
-					<div class="stat-value">89,400</div>
+					<div class="stat-value">
+						{ models.FormatCurrency(data.Balance) }
+					</div>
 				</div>
 			</div>
 			<div class="stats shadow-lg">
@@ -119,9 +164,20 @@ templ stats() {
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sigma"><path d="M18 7V4H6l6 8-6 8h12v-3"></path></svg>
 					</div>
 					<div class="stat-title">Nr. of Transactions</div>
-					<div class="stat-value">89,400</div>
+					<div class="stat-value">
+						{ strconv.Itoa(data.NrTransactions) }
+					</div>
 				</div>
 			</div>
+		</div>
+	</div>
+}
+
+templ tagCard(name string, balance int) {
+	<div class="flex justify-between items-center">
+		<div>{ name }</div>
+		<div class="font-medium">
+			{ models.FormatCurrency(balance) }
 		</div>
 	</div>
 }
