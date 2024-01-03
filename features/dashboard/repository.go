@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -24,7 +25,7 @@ func (r *RepositoryImpl) GetTransactions(ctx context.Context, walletId, year int
 		Where(sq.Eq{
 			"wallet_id":                  walletId,
 			"STRFTIME('%Y', created_at)": strconv.Itoa(year),
-			"STRFTIME('%m', created_at)": strconv.Itoa(int(month)),
+			"STRFTIME('%m', created_at)": fmt.Sprintf("%02d", month),
 		})
 
 	stmt, args, err := builder.ToSql()
