@@ -57,20 +57,36 @@ templ dashboardView(data dashboardViewData) {
 		<h2 class="mt-8 pl-2 text-3xl font-semibolr">Expenses by Category</h2>
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
 			<div class="card shadow-lg bg-base-100 lg:col-span-4">
-				<div class="card-body h-[450px]" id="piechart"></div>
+				<div class="card-body h-[450px]" id="piechart">
+					if len(data.data.TagBalance) == 0 {
+						<div class="flex flex-row items-center justify-center w-full h-full text-lg gap-2">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><line x1="9" x2="15" y1="15" y2="9"></line><circle cx="12" cy="12" r="10"></circle></svg>
+							No Data
+						</div>
+					}
+				</div>
 			</div>
 			<div class="card shadow-lg bg-base-100 lg:col-span-3">
 				<div class="card-body md:max-h-[450px] md:overflow-auto scroll-m-1">
-					for idx, tagBalance := range data.data.TagBalance {
-						if idx > 0 {
-							<div class="divider"></div>
+					if len(data.data.TagBalance) > 0 {
+						for idx, tagBalance := range data.data.TagBalance {
+							if idx > 0 {
+								<div class="divider"></div>
+							}
+							@tagCard(tagBalance.Tag.Name, tagBalance.Balance)
 						}
-						@tagCard(tagBalance.Tag.Name, tagBalance.Balance)
+					} else {
+						<div class="flex flex-row items-center justify-center w-full h-full text-lg gap-2">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><line x1="9" x2="15" y1="15" y2="9"></line><circle cx="12" cy="12" r="10"></circle></svg>
+							No Data
+						</div>
 					}
 				</div>
 			</div>
 		</div>
-		@drawChart(data.data.TagBalance)
+		if len(data.data.TagBalance) > 0 {
+			@drawChart(data.data.TagBalance)
+		}
 	}
 }
 
@@ -125,49 +141,20 @@ script drawChart(data []models.TagBalance) {
 templ stats(data models.DashboardData) {
 	<div class="pt-6">
 		<div class="grid gap-4 xs:grid-cols-2 lg:grid-cols-4">
-			<div class="stats shadow-lg">
-				<div class="stat">
-					<div class="stat-figure">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
-					</div>
-					<div class="stat-title">Money In</div>
-					<div class="stat-value">
-						{ models.FormatCurrency(data.Income) }
-					</div>
-				</div>
-			</div>
-			<div class="stats shadow-lg">
-				<div class="stat">
-					<div class="stat-figure">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-down"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"></polyline><polyline points="16 17 22 17 22 11"></polyline></svg>
-					</div>
-					<div class="stat-title">Expenses</div>
-					<div class="stat-value">
-						{ models.FormatCurrency(data.Outcome) }
-					</div>
-				</div>
-			</div>
-			<div class="stats shadow-lg">
-				<div class="stat">
-					<div class="stat-figure">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-banknote"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
-					</div>
-					<div class="stat-title">Balance</div>
-					<div class="stat-value">
-						{ models.FormatCurrency(data.Balance) }
-					</div>
-				</div>
-			</div>
-			<div class="stats shadow-lg">
-				<div class="stat">
-					<div class="stat-figure">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sigma"><path d="M18 7V4H6l6 8-6 8h12v-3"></path></svg>
-					</div>
-					<div class="stat-title">Nr. of Transactions</div>
-					<div class="stat-value">
-						{ strconv.Itoa(data.NrTransactions) }
-					</div>
-				</div>
+			@statsCard("Money In", data.Income)
+			@statsCard("Expenses", data.Outcome)
+			@statsCard("Balance", data.Balance)
+			@statsCard("Nr. of Transactions", data.NrTransactions)
+		</div>
+	</div>
+}
+
+templ statsCard(title string, value int) {
+	<div class="stats shadow-lg">
+		<div class="stat">
+			<div class="stat-title">{ title }</div>
+			<div class="stat-value text-3xl">
+				{ models.FormatCurrency(value) }
 			</div>
 		</div>
 	</div>
