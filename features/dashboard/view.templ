@@ -141,20 +141,24 @@ script drawChart(data []models.TagBalance) {
 templ stats(data models.DashboardData) {
 	<div class="pt-6">
 		<div class="grid gap-4 xs:grid-cols-2 lg:grid-cols-4">
-			@statsCard("Money In", data.Income)
-			@statsCard("Expenses", data.Outcome)
-			@statsCard("Balance", data.Balance)
-			@statsCard("Nr. of Transactions", data.NrTransactions)
+			@statsCard("Money In", data.Income, true)
+			@statsCard("Expenses", data.Outcome, true)
+			@statsCard("Balance", data.Balance, true)
+			@statsCard("Nr. of Transactions", data.NrTransactions, false)
 		</div>
 	</div>
 }
 
-templ statsCard(title string, value int) {
+templ statsCard(title string, value int, isCurrency bool) {
 	<div class="stats shadow-lg">
 		<div class="stat">
 			<div class="stat-title">{ title }</div>
 			<div class="stat-value text-3xl">
-				{ models.FormatCurrency(value) }
+				if isCurrency {
+					{ models.FormatCurrency(value) }
+				} else {
+					{ strconv.Itoa( value ) }
+				}
 			</div>
 		</div>
 	</div>
