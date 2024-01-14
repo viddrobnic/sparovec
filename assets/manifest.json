@@ -1,0 +1,12 @@
+{
+    "name": "Šparovec",
+    "icons": [
+        {
+            "src": "/static/favicon.png",
+            "type": "image/png",
+            "sizes": "512x512"
+        }
+    ],
+    "start_url": "/",
+    "display": "standalone"
+}
