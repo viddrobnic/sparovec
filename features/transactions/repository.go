@@ -3,6 +3,7 @@ package transactions
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -50,6 +51,44 @@ func (t *RepositoryImpl) Create(ctx context.Context, transaction *models.Transac
 	}
 
 	*transaction = *dbTransaction.ToModel()
+	return nil
+}
+
+func (t *RepositoryImpl) CreateMany(ctx context.Context, transactions []*models.Transaction) error {
+	builder := sq.Insert("transactions").
+		Columns(
+			"wallet_id",
+			"name",
+			"value",
+			"tag_id",
+			"created_at",
+		)
+
+	for _, tr := range transactions {
+		var tagId *int
+		if tr.Tag != nil {
+			tagId = &tr.Tag.Id
+		}
+
+		builder = builder.Values(
+			tr.WalletId,
+			tr.Name,
+			tr.Value,
+			tagId,
+			tr.CreatedAt,
+		)
+	}
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return fmt.Errorf("query toSql: %w", err)
+	}
+
+	_, err = t.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("execute query: %w", err)
+	}
+
 	return nil
 }
 
@@ -129,4 +168,47 @@ func (t *RepositoryImpl) Delete(ctx context.Context, id int) error {
 
 	_, err = t.db.ExecContext(ctx, stmt, args...)
 	return err
+}
+
+func (t *RepositoryImpl) TagInfoForNames(ctx context.Context, walletId int, names []string) (map[string]int, error) {
+	innerBuilder := sq.StatementBuilder.
+		Select("*").
+		Prefix("NOT EXISTS(").
+		From("transactions tr_inner").
+		Where("tr_inner.tag_id IS NOT NULL").
+		Where("tr_inner.wallet_id = tr.wallet_id").
+		Where("tr_inner.name = tr.name").
+		Where("tr_inner.created_at > tr.created_at").
+		Suffix(")")
+
+	builder := sq.
+		Select("*").
+		From("transactions tr").
+		Where(sq.Eq{
+			"wallet_id": walletId,
+			"name":      names,
+		}).
+		Where("tag_id is not null").
+		Where(innerBuilder).
+		OrderBy("created_at DESC")
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("builder toSql: %w", err)
+	}
+
+	transactions := []*models.DbTransaction{}
+	err = t.db.SelectContext(ctx, &transactions, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("exec query: %w", err)
+	}
+
+	res := make(map[string]int)
+	for _, tr := range transactions {
+		if tr.TagId.Valid {
+			res[tr.Name] = int(tr.TagId.Int32)
+		}
+	}
+
+	return res, nil
 }

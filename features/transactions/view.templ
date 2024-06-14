@@ -23,22 +23,41 @@ templ transactionsView(data transactionsViewData) {
 	@layout.Layout(data.navbar) {
 		<div class="flex flex-wrap gap-5 justify-between items-center">
 			<h1 class="text-5xl font-semibold">Transactions</h1>
-			<button class="shadow-lg btn btn-primary" onclick="show_create_dialog()">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					class="mr-2 w-6 h-6"
-				>
-					<path d="M5 12h14"></path>
-					<path d="M12 5v14"></path>
-				</svg>
-				Add Transaction
-			</button>
+			<div class="flex gap-4">
+				<button class="shadow-lg btn btn-primary btn-outline" onclick="show_import_dialog()">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="mr-2 w-6 h-6"
+					>
+						<path d="M12 3v12"></path>
+						<path d="m8 11 4 4 4-4"></path>
+						<path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"></path>
+					</svg>
+					Import
+				</button>
+				<button class="shadow-lg btn btn-primary" onclick="show_create_dialog()">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="mr-2 w-6 h-6"
+					>
+						<path d="M5 12h14"></path>
+						<path d="M12 5v14"></path>
+					</svg>
+					Add Transaction
+				</button>
+			</div>
 		</div>
 		<div class="overflow-x-auto mt-6 shadow-lg card bg-base-100 overflow-y-clip">
 			<div class="card-body" id="transactions_table">
@@ -65,16 +84,14 @@ templ transactionsView(data transactionsViewData) {
 						}
 					</tbody>
 				</table>
-				<div
-					class="flex flex-row items-center justify-end mt-2 text-sm font-medium space-x-6"
-				>
+				<div class="flex flex-row justify-end items-center mt-2 space-x-6 text-sm font-medium">
 					<div>Page { data.currentPage } of { data.totalPages } </div>
 					<div class="join">
 						<a
 							role="button"
 							class="join-item btn"
 							href={ data.previousPageUrl }
-							disabled?={ len(data.previousPageUrl) == 0  }
+							disabled?={ len(data.previousPageUrl) == 0 }
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -89,12 +106,7 @@ templ transactionsView(data transactionsViewData) {
 								<path d="m15 18-6-6 6-6"></path>
 							</svg>
 						</a>
-						<a
-							role="button"
-							class="join-item btn"
-							href={ data.nextPageUrl }
-							disabled?={ len(data.nextPageUrl) == 0 }
-						>
+						<a role="button" class="join-item btn" href={ data.nextPageUrl } disabled?={ len(data.nextPageUrl)==0 }>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 24 24"
@@ -113,55 +125,62 @@ templ transactionsView(data transactionsViewData) {
 			</div>
 		</div>
 		@transactionDialog(data)
+		@importDialog(data)
 		@deleteTransactionDialog(data)
 		<script>
-            function show_create_dialog() {
-                transaction_form.reset()
+			function show_create_dialog() {
+				transaction_form.reset()
 
-                transaction_submit_type.value = "create"
+				transaction_submit_type.value = "create"
 
-                transaction_alert.style.display = "none"
-                transaction_dialog.showModal()
-            }
+				transaction_alert.style.display = "none"
+				transaction_dialog.showModal()
+			}
 
-            // Handle save errors
-            document.body.addEventListener("saveError", function (evt) {
-                transaction_alert_message.innerHTML = evt.detail.value
-                transaction_alert.style.display = "grid"
-            })
+			function show_import_dialog() {
+				import_form.reset()
+				import_dialog.showModal()
+			}
 
-            // Handle save success
-            document.body.addEventListener("saveSuccess", function (evt) {
-                transaction_dialog.close()
-            })
+			// Handle save errors
+			document.body.addEventListener("saveError", function (evt) {
+				transaction_alert_message.innerHTML = evt.detail.value
+				transaction_alert.style.display = "grid"
+			})
 
-            document.body.addEventListener("deleteSuccess", function (evt) {
-                delete_transaction_dialog.close()
-            })
-        </script>
+			// Handle save success
+			document.body.addEventListener("saveSuccess", function (evt) {
+				transaction_dialog.close()
+				import_dialog.close()
+			})
+
+			document.body.addEventListener("deleteSuccess", function (evt) {
+				delete_transaction_dialog.close()
+			})
+		</script>
 	}
 }
 
 script showUpdateDialog(transaction *models.TransactionRender) {
-    transaction_form.reset()
+	transaction_form.reset()
 
-    transaction_submit_type.value = "update"
-    transaction_id.value = transaction.Id
-    transaction_name.value = transaction.Name
-    transaction_type_outcome.checked = transaction.Type === "outcome"
-    transaction_type_income.checked = transaction.Type === "income"
-    transaction_value.value = transaction.FormValue
-    transaction_date.value = transaction.FormCreatedAt
-    transaction_tag.value = transaction.FormTagId
+	transaction_submit_type.value = "update"
+	transaction_id.value = transaction.Id
+	transaction_name.value = transaction.Name
+	transaction_type_outcome.checked = transaction.Type === "outcome"
+	transaction_type_income.checked = transaction.Type === "income"
+	transaction_value.value = transaction.FormValue
+	transaction_date.value = transaction.FormCreatedAt
+	transaction_tag.value = transaction.FormTagId
 
-    transaction_alert.style.display = "none"
-    transaction_dialog.showModal()
+	transaction_alert.style.display = "none"
+	transaction_dialog.showModal()
 }
 
 script showDeleteDialog(id int, name string) {
-    delete_transaction_form_id.value = id
-    delete_transaction_warn_name.innerHTML = name
-    delete_transaction_dialog.showModal()
+	delete_transaction_form_id.value = id
+	delete_transaction_warn_name.innerHTML = name
+	delete_transaction_dialog.showModal()
 }
 
 templ transactionRow(transaction *models.TransactionRender) {
@@ -198,14 +217,9 @@ templ transactionRow(transaction *models.TransactionRender) {
 						<circle cx="12" cy="19" r="1"></circle>
 					</svg>
 				</label>
-				<ul
-					tabindex="0"
-					class="p-2 w-52 shadow dropdown-content z-[1] menu bg-base-100 rounded-box"
-				>
+				<ul tabindex="0" class="p-2 w-52 shadow dropdown-content z-[1] menu bg-base-100 rounded-box">
 					<li>
-						<button
-							onclick={ showUpdateDialog(transaction) }
-						>
+						<button onclick={ showUpdateDialog(transaction) }>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 24 24"
@@ -247,6 +261,45 @@ templ transactionRow(transaction *models.TransactionRender) {
 			</div>
 		</td>
 	</tr>
+}
+
+templ importDialog(data transactionsViewData) {
+	<dialog id="import_dialog" class="modal">
+		<div class="max-w-lg modal-box">
+			<h3 class="text-lg font-bold">Add a Transaction</h3>
+			<p class="pt-1">Select an <span class="font-mono">ofx</span> file you want to import.</p>
+			<form
+				id="import_form"
+				class="pt-4 space-y-4"
+				hx-post={ fmt.Sprintf("/wallets/%d/transactions/import", data.navbar.SelectedWalletId) }
+				hx-swap="outerHTML"
+				hx-target="#transactions_table"
+				hx-select="#transactions_table"
+				hx-disabled-elt="#import_button"
+				hx-encoding="multipart/form-data"
+			>
+				<input
+					type="file"
+					name="file"
+					class="w-full file-input file-input-bordered"
+					accept=".ofx,application/x-ofx"
+					required
+				/>
+				<div class="justify-between pt-2 modal-action">
+					<button type="button" class="btn" onclick="import_dialog.close()">
+						Cancel
+					</button>
+					<button type="submit" class="btn btn-primary" id="import_button">
+						<span class="loading loading-spinner loading-xs loading-indicator"></span>
+						Save
+					</button>
+				</div>
+			</form>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button>close</button>
+		</form>
+	</dialog>
 }
 
 templ transactionDialog(data transactionsViewData) {
@@ -312,11 +365,7 @@ templ transactionDialog(data transactionsViewData) {
 						value={ time.Now().Format("2006-01-02") }
 						required
 					/>
-					<select
-						id="transaction_tag"
-						name="tag"
-						class="w-full xs:flex-grow xs:w-auto select select-bordered"
-					>
+					<select id="transaction_tag" name="tag" class="w-full xs:flex-grow xs:w-auto select select-bordered">
 						<option selected value="">No Tag Selected</option>
 						for _, tag := range data.tags {
 							<option value={ strconv.Itoa(tag.Id) }>{ tag.Name }</option>
@@ -344,9 +393,7 @@ templ transactionDialog(data transactionsViewData) {
 						Cancel
 					</button>
 					<button type="submit" class="btn btn-primary" id="transaction_button">
-						<span
-							class="loading loading-spinner loading-xs loading-indicator"
-						></span>
+						<span class="loading loading-spinner loading-xs loading-indicator"></span>
 						Save
 					</button>
 				</div>
@@ -381,9 +428,7 @@ templ deleteTransactionDialog(data transactionsViewData) {
 						Cancel
 					</button>
 					<button type="submit" class="btn btn-error" id="delete_transaction_button">
-						<span
-							class="loading loading-spinner loading-xs loading-indicator"
-						></span>
+						<span class="loading loading-spinner loading-xs loading-indicator"></span>
 						Delete
 					</button>
 				</div>

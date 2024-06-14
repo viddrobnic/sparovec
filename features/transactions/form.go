@@ -49,15 +49,23 @@ type saveTransactionForm struct {
 	Date       string                    `form:"date"`
 }
 
-func (f *saveTransactionForm) parse(walletId int) (*models.Transaction, error) {
-	// Parse value
-	valueStr := strings.ReplaceAll(f.Value, ",", ".")
+func parseTransactionValue(valueStr string) (int, error) {
+	valueStr = strings.ReplaceAll(valueStr, ",", ".")
 	valueF, err := strconv.ParseFloat(valueStr, 64)
 	if err != nil {
-		return nil, &models.ErrInvalidForm{Message: "Value is not a number"}
+		return 0, &models.ErrInvalidForm{Message: "Value is not a number"}
 	}
 
-	value := int(math.Round(valueF * 100))
+	return int(math.Round(valueF * 100)), nil
+}
+
+func (f *saveTransactionForm) parse(walletId int) (*models.Transaction, error) {
+	// Parse value
+	value, err := parseTransactionValue(f.Value)
+	if err != nil {
+		return nil, err
+	}
+
 	if value < 0 {
 		return nil, &models.ErrInvalidForm{Message: "Value must be positive"}
 	}

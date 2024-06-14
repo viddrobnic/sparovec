@@ -3,12 +3,14 @@ package transactions
 import (
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
@@ -16,13 +18,17 @@ import (
 	"github.com/viddrobnic/sparovec/features/auth"
 	"github.com/viddrobnic/sparovec/features/htmx"
 	"github.com/viddrobnic/sparovec/models"
+	"golang.org/x/net/html/charset"
 )
 
 type Repository interface {
 	Create(ctx context.Context, transaction *models.Transaction) error
+	CreateMany(ctx context.Context, transactions []*models.Transaction) error
 	Update(ctx context.Context, transaction *models.Transaction) error
 	List(ctx context.Context, req *models.TransactionsListRequest) ([]*models.Transaction, int, error)
 	Delete(ctx context.Context, id int) error
+
+	TagInfoForNames(ctx context.Context, walletId int, names []string) (map[string]int, error)
 }
 
 type TagsRepository interface {
@@ -66,6 +72,7 @@ func (t *Transactions) Mount(router chi.Router) {
 	group.Get("/", t.transactions)
 	group.Post("/", t.saveTransaction)
 	group.Post("/delete", t.deleteTransaction)
+	group.Post("/import", t.importTransactions)
 
 	router.Mount("/wallets/{walletId}/transactions", group)
 }
@@ -232,6 +239,88 @@ func (t *Transactions) deleteTransaction(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set(htmx.HeaderTriggerAfterSettle, htmx.EventDeleteSuccess)
+	t.transactions(w, r)
+}
+
+func (t *Transactions) importTransactions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user := auth.GetUser(r)
+	walletId := features.GetWalletId(r)
+
+	if !t.hasPermission(ctx, w, walletId, user.Id) {
+		return
+	}
+
+	// Read and parse file
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		t.log.Info("failed to get uploaded import file", "error", err)
+		http.Error(w, "Failed to get uploaded file", http.StatusBadRequest)
+	}
+	defer file.Close()
+
+	data := ofx{}
+	decoder := xml.NewDecoder(file)
+	decoder.CharsetReader = charset.NewReaderLabel
+	err = decoder.Decode(&data)
+	if err != nil {
+		t.log.Error("Failed to parse import file", "error", err)
+		http.Error(w, "Failed to parse import file", http.StatusBadRequest)
+		return
+	}
+
+	// Get name->tag_id mapping
+	names := make([]string, len(data.Transactions))
+	for i, tr := range data.Transactions {
+		names[i] = tr.Description
+	}
+	tagNameMapping, err := t.repository.TagInfoForNames(ctx, walletId, names)
+	if err != nil {
+		t.log.Error("Failed to get transactions from db", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+
+	// Map ofx transactions to db transactions
+	transactions := make([]*models.Transaction, len(data.Transactions))
+	for i, tr := range data.Transactions {
+		var tag *models.Tag
+		if tagId, ok := tagNameMapping[tr.Description]; ok {
+			tag = &models.Tag{
+				Id: tagId,
+			}
+		}
+
+		created, err := time.Parse("20060102", tr.Date)
+		if err != nil {
+			t.log.Warn("failed to parse date", "date", tr.Date, "error", err)
+			created = time.Now()
+		}
+
+		value, err := parseTransactionValue(tr.Amount)
+		if err != nil {
+			t.log.Warn("Failed to parse transaction value", "value", tr.Amount, "error", err)
+			http.Error(w, "Failed to parse transaction value", http.StatusInternalServerError)
+			return
+		}
+
+		transactions[i] = &models.Transaction{
+			WalletId:  walletId,
+			Name:      tr.Description,
+			Value:     value,
+			Tag:       tag,
+			CreatedAt: created,
+		}
+	}
+
+	// Insert to db
+	err = t.repository.CreateMany(ctx, transactions)
+	if err != nil {
+		t.log.Error("Failed to insert transactions", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(htmx.HeaderTriggerAfterSettle, htmx.EventSaveSuccess)
 	t.transactions(w, r)
 }
 
